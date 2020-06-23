@@ -44,14 +44,13 @@ hospital <- select_columns(hospital,c("State", "TotalPublicHealthFacilities_HMIS
 # Merging with other files
 temp <- merge(covid_19_india,pop_census,by.x = "State", by.y = "State")
 temp2 <- merge(temp, testing_lab, by.x = "State", by.y = "State" )
-ind_data <- merge(temp2, hospital, by.x = "State", by.y = "State")
+ind_data_merged <- merge(temp2, hospital, by.x = "State", by.y = "State")
 
 write.csv(covid_19_india, "data/covid_19_india_filtered.csv")
 write.csv(pop_census, "data/pop_census_filtered.csv")
 write.csv(testing_details, "data/testing_filtered.csv")
 write.csv(testing_lab, "data/lab_filtered.csv")
 write.csv(hospital, "data/hospital.csv")
-write.csv(hospital, "data/ind_data.csv")
-
+write.csv(ind_data_merged, "data/ind_data_merged.csv")
 
 
