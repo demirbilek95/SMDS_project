@@ -1,31 +1,28 @@
 # Filtering data for states just to try
 
 library(dplyr)
-covid_19_india <- read.csv("data/ind_data_merged.csv")
-covid_19_india
-
-str(covid_19_india)
-
-covid_19_india$State
-
-jharkhand_data  <-  covid_19_india %>% filter(State == "Jharkhand")
-jharkhand_data
-########################################################################
-
-# Plotting total confirmed cases for states
-
 library(ggplot2)
 
-covid_19_india <- read.csv("data/covid_19_india_filtered.csv")
+covid_19_india <- read.csv("data/re_arranged_covid_19_india_filtered.csv")
 
-tot_states <- covid_19_india %>% group_by(State) %>% summarise(
-  tot_confirmed = sum(Confirmed)
-)
+# Plotting total confirmed cases for states
+data_plot <- covid_19_india[nrow(covid_19_india),] # Taking the last date(row) of the dataset
 
-plot(jharkhand_data$Confirmed)
+# Deleting unnecessery coolumns
+data_plot$X = NULL
+data_plot$Date = NULL
 
-options(scipen=100)
-ggplot(tot_states,aes(x=State, y = tot_confirmed)) + geom_bar(stat = "identity") + scale_y_continuous("Total Confirmed Cases")
+colnames <- colnames(data_plot)
+colnames[4] <- "Madhya Pradesh"
+colnames[7] <- "West Bengal"
+
+data_plot[2,] <- colnames # Adding state names as row
+
+data_plot <- data.frame(t(data_plot))
+data_plot <- rename(data_plot, State = "X2",Confirmed = "X105")
+data_plot$Confirmed <- as.numeric(paste(data_plot$Confirmed))
+
+ggplot(data_plot,aes(x=State, y = Confirmed)) + geom_bar(stat = "identity") 
 #ggsave(paste0("plots/total_confirmed_states.png"))
 
 #########################################################################
@@ -36,24 +33,11 @@ library(sp)
 library(RColorBrewer)
 ind1=readRDS("data/IND_adm/IND_adm1.rds")
 
-spplot(ind1, "NAME_1", scales=list(draw=T), colorkey=F, main="India")
-ind1
-
-?merge
-
 ind1$NAME_1 = as.factor(ind1$NAME_1)
-ind1$fake.data = merge(ind1@data,tot_states,by.x = "NAME_1", by.y = "State",all.x = TRUE)$tot_confirmed
-
-
-spplot(ind1,"fake.data",main = "Central India and Total Confirmed Cases",
+ind1$Confirmed = merge(ind1@data,data_plot,by.x = "NAME_1", by.y = "State",all.x = TRUE)$Confirmed
+png("plots/map_plot.png")
+spplot(ind1,"Confirmed",main = "Central India and Total Confirmed Cases",
        colorkey=T, scales=list(draw=T))
-
-ind1$fake.data[is.na(ind1$fake.data)] <- 0
-
-?spplot
-
-
-merge(ind1@data,tot_states,by.x = "NAME_1", by.y = "State",all.x = TRUE)
-
+dev.off()
 
 
