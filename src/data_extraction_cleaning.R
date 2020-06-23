@@ -39,19 +39,19 @@ testing_lab <- select_columns(testing_lab, c("lab","State"))
 ## Aggregate the number of testing lab
 testing_lab <- testing_lab %>% group_by(State) %>% summarise(num_lab = n())
 
-<<<<<<< HEAD
+
 hospital <- select_columns(hospital,c("State", "TotalPublicHealthFacilities_HMIS"))
 
 # Merging with other files
 temp <- merge(covid_19_india,pop_census,by.x = "State", by.y = "State")
 temp2 <- merge(temp, testing_lab, by.x = "State", by.y = "State" )
 ind_data_merged <- merge(temp2, hospital, by.x = "State", by.y = "State")
-=======
+
 covid_19_india <- 
   covid_19_india %>% 
   mutate(Confirmed = Confirmed - Cured - Deaths) %>% 
   select(Date, State, Confirmed)
->>>>>>> d6299152662bad4fa351bc3fc5b5695cf76a5b5a
+
 
 write.csv(covid_19_india, "data/covid_19_india_filtered.csv")
 write.csv(pop_census, "data/pop_census_filtered.csv")
