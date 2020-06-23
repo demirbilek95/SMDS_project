@@ -1,11 +1,17 @@
 library(dplyr)
 library(ggplot2)
-library(purrr)
+
 #plotting the curve of the infected people for each state
-covid_19 <- read.csv("data/re_arranged_covid_19_india_filtered.csv")
-states <- c("Gujarat","Maharashtra","Madhya.Pradesh",
-            "Chhattisgarh","Jharkhand","Odisha",
-            "West.Bengal")
+covid_19 <- read.csv("data/covid_19_india_filtered.csv")
+states <- unique(covid_19$State)
+
+ggplot(covid_19)+
+  geom_point(aes(X,Confirmed-Deaths-Cured))+
+  geom_point(aes(X,Deaths), color="red") +
+  geom_point(aes(X,Cured), color="green") +
+  facet_wrap(vars(State), scales="free_y")
+
+ggsave("plots/infect+death+cured_facets.png", width = 10, height=8 )
 
 for (state in states) {
   covid_19 %>% 
