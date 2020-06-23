@@ -21,6 +21,7 @@ testing_details <- state_filter(testing_details, states)
 
 covid_19_india <- 
   covid_19_india %>% 
+  mutate(Confirmed = Confirmed - Cured - Deaths) %>% 
   select(Date, State, Confirmed)
 
 write.csv(covid_19_india, "data/covid_19_india_filtered.csv")

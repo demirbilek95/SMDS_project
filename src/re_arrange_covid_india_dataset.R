@@ -3,7 +3,8 @@
 library(tidyr)
 
 # import covid_india_19_filtered
-india_19 <- read.csv('~/Documents/Statistical_method_data_science/smds_exercises/SMDS_project/data/covid_19_india_filtered.csv', row.names=1)
+india_19 <- read.csv('data/covid_19_india_filtered.csv',
+                     row.names=1)
 
 states <- as.list(levels(india_19$State)) # take the states
 states_list <- vector("list", length(states)) # prepare a list of dataframes
