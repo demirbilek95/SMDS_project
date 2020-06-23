@@ -19,6 +19,7 @@ for(state in states){ # for each state, build a dataframe composed by the days a
   states_list[[state]] <- region # put the dataframe into the list
 }
 
+
 merged <- merge(states_list[["Chhattisgarh"]], states_list[["Gujarat"]], by = "Date", all = TRUE)
 merged <- merge(merged, states_list[["Jharkhand"]], by = "Date", all = TRUE)
 merged <- merge(merged, states_list[["Madhya Pradesh"]], by = "Date", all = TRUE)
