@@ -13,6 +13,15 @@ ggplot(covid_19)+
 
 ggsave("plots/infect+death+cured_facets.png", width = 10, height=8 )
 
+testing_details <- read.csv("data/testing_filtered.csv")
+ggplot(testing_details)+
+  geom_point(aes(Date,TotalSamples))+
+  geom_point(aes(Date,Positive), color="red") +
+  geom_point(aes(Date,Negative), color="green") +
+  facet_wrap(vars(State), scales="free_y")
+
+ggsave("plots/tests_facets.png", width = 10, height=8 )
+
 for (state in states) {
   covid_19 %>% 
     ggplot(aes(x = X, y = !!ensym(state))) + # !!ensym transforms a string to a symbol
