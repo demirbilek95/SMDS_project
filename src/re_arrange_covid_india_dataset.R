@@ -4,6 +4,7 @@ library(tidyr)
 
 # import covid_india_19_filtered
 india_19 <- read.csv('~/Documents/Statistical_method_data_science/smds_exercises/SMDS_project/data/covid_19_india_filtered.csv', row.names=1)
+# india_19 <- read.csv('~/Documents/Statistical_method_data_science/smds_exercises/SMDS_project/data/covid_19_india_daily_infected_filtered.csv', row.names=1)
 
 states <- as.list(levels(india_19$State)) # take the states
 states_list <- vector("list", length(states)) # prepare a list of dataframes
@@ -33,6 +34,7 @@ merged <- merge(merged, states_list[["West Bengal"]], by = "Date", all = TRUE)
 merged[is.na(merged)] <- 0 # set to zero all NA values
 
 write.csv(merged, "data/re_arranged_covid_19_india_filtered.csv") # export it
+# write.csv(merged, "data/re_arranged_covid_19_india_daily_infected_filtered.csv") # export it
 
 # at the end we have a dataframe composed by dates and, for each date,
 # the corrisponding confirmed cases state by state.
