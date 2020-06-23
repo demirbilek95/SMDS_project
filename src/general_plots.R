@@ -1,7 +1,7 @@
 # Filtering data for states just to try
 
 library(dplyr)
-covid_19_india <- read.csv("data/ind_data_merged.csv.csv")
+covid_19_india <- read.csv("data/ind_data_merged.csv")
 covid_19_india
 
 str(covid_19_india)

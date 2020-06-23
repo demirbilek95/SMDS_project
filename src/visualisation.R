@@ -1,20 +1,18 @@
 library(dplyr)
 library(ggplot2)
-#library(egg)
-
-covid_19 <- read.csv("data/covid_19_india_filtered.csv")
-states <- (covid_19 %>% select(State) %>% unique)$State
+library(purrr)
+#plotting the curve of the infected people for each state
+covid_19 <- read.csv("data/re_arranged_covid_19_india_filtered.csv")
+states <- c("Gujarat","Maharashtra","Madhya.Pradesh",
+            "Chhattisgarh","Jharkhand","Odisha",
+            "West.Bengal")
 
 for (state in states) {
-    covid_19 %>% 
-    filter(State == state) %>% 
-    ggplot(aes(1:nrow(.), Confirmed, colours = State)) +
+  covid_19 %>% 
+    ggplot(aes(x = X, y = !!ensym(state))) + # !!ensym transforms a string to a symbol
     geom_point() +
-    labs(x = "Time", y = "Confirmed", title = paste("State", state))
-  ggsave(paste0("plots/confirmed_", state, ".png"))
-  #append(plots, c(p))
+    labs(x = "Time", y = "Infected", title = paste("State", state))
+  ggsave(paste0("plots/", "infected_", state, ".png"))
 }
 
-#ggarrange(p[1], p[2], p[3], p[4], p[5], p[6], p[7], p[8])
-#grid.arrange(p[1], p[2], p[3], p[4], p[5], p[6], p[7], p[8], nrow = 3)
 
