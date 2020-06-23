@@ -9,7 +9,7 @@ states <- c("Gujarat","Maharashtra","Madhya.Pradesh",
 
 for (state in states) {
   covid_19 %>% 
-    ggplot(aes(x = X, y = !!ensym(state))) + # !!ensym transforms a string a symbol
+    ggplot(aes(x = X, y = !!ensym(state))) + # !!ensym transforms a string to a symbol
     geom_point() +
     labs(x = "Time", y = "Infected", title = paste("State", state))
   ggsave(paste0("plots/", "infected_", state, ".png"))
