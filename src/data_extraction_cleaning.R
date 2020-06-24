@@ -31,7 +31,11 @@ testing_details <- state_filter(testing_details, states)
 testing_lab <- state_filter(testing_lab,states)
 hospital <- state_filter(hospital,states)
 
-covid_19_india <- select_columns(covid_19_india,c("Date","State","Confirmed"))
+covid_19_india <- 
+  covid_19_india %>% 
+  mutate(Confirmed = Confirmed - Cured - Deaths) %>% 
+  select(Date, State, Confirmed)
+
 pop_census <- select_columns(pop_census, 
                              c("State","Population","Rural.population","Urban.population",
                                "Area","Density","Gender.Ratio"))
@@ -50,11 +54,6 @@ ind_data_merged <- merge(temp2, hospital, by.x = "State", by.y = "State")
 ind_data_merged$Date <- as.Date(ind_data_merged$Date,format =  "%d/%m/%Y")
 ind_data_merged <- ind_data_merged[order(ind_data_merged$Date),]
 rownames(ind_data_merged) <- NULL
-
-covid_19_india <- 
-  covid_19_india %>% 
-  mutate(Confirmed = Confirmed - Cured - Deaths) %>% 
-  select(Date, State, Confirmed)
 
 
 write.csv(covid_19_india, "data/filtered_data/covid_19_india_filtered.csv")
