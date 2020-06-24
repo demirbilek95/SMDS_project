@@ -6,7 +6,7 @@ library(dplyr)
 
 # load datasets
 covid_19_india <- read.csv('~/Documents/Statistical_method_data_science/smds_exercises/SMDS_project/data/re_arranged_covid_19_india_daily_infected_filtered.csv', row.names = 1)
-testing <- read.csv('~/Documents/Statistical_method_data_science/smds_exercises/SMDS_project/data/testing_filtered.csv', row.names = 1)
+testing <- read.csv('~/Documents/Statistical_method_data_science/smds_exercises/SMDS_project/data/testing_filtered_filled.csv', row.names = 1)
 
 prediction_period <- 7 # one week of prediction
 end <- length(covid_19_india$Maharashtra) # number of days
@@ -56,7 +56,7 @@ for(i in 2:prediction_period){
 test_data$yest_confirmed
 test_confirmed
 
-# make plot
+# make plot, dogan knows
 pred_train <- predict(poisson_model, newdata = train_data)
 plot(train_confirmed)
 lines(pred_train,col="red")
@@ -71,6 +71,7 @@ lines(pred_test,col="red")
 mean((test_confirmed - pred_test)^2/(nrow(test_data)))
 mad((test_confirmed - pred_test)/(nrow(test_data)))
 
+# make the union between train and test sets to make the prediction
 data <- bind_rows(train_data, test_data)
 select(data, date, yest_confirmed, tot_sample, positive)
 
@@ -78,13 +79,7 @@ pred <- predict(poisson_model, newdata = select(data, date, yest_confirmed, tot_
 
 library(ggplot2)
 
+# something wrong on ggplot...
 ggplot(data = covid_19_india, aes(x = date, y = Maharashtra)) + 
   geom_line(col = 'blue') + 
   geom_line(aes(y = pred), col = 'red')
-
-# compute informative plot
-library(jtools)
-library(ggstance)
-library(broom)
-
-plot_summs(poisson_model, scale = TRUE, exp = TRUE)
