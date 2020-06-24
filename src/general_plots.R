@@ -1,5 +1,3 @@
-# Filtering data for states just to try
-
 library(dplyr)
 library(ggplot2)
 
