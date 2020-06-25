@@ -40,7 +40,10 @@ liste <- c(0)
 liste <- c(liste,maharash$Confirmed[c(1:(length(maharash$Confirmed)-1))])
 maharash$yesterday_confirmed <- liste
 maharash$num_day <- seq(1:nrow(maharash))
+maharash$daily <- maharash$Confirmed - maharash$yesterday_confirmed
+maharash$daily[maharash$daily < 0] <- 0
 
+plot(maharash$daily)
 plot(maharash$Confirmed)
 
 # train-test split, last 1 week as a test set
@@ -52,7 +55,8 @@ test <- maharash[-seq(1:train_ind), ]
 
 # first model
 
-model <- glm(Confirmed ~ yesterday_confirmed+num_day+TotalSamples,train,family = gaussian())
+model <- glm(Confirmed ~ yesterday_confirmed+num_day+TotalSamples,train,
+             family = gaussian())
 ?glm
 summary(model)
 # plot(model)
@@ -79,8 +83,6 @@ test$Confirmed
 #test$yesterday_confirmed
 
 
-
-
 # we underestimate the trend maybe good idea to do something to increase it
 plot(test$Confirmed)
 lines(pred,col="red")
@@ -90,12 +92,10 @@ mean((test$Confirmed - pred)^2/(nrow(test)))
 mad((test$Confirmed - pred)/(nrow(test)))
 
 library(ggplot2)
-
 # here observation + predictions are created for plotting purpose otherwise I got error since
 # two dataframe don't have same length
 obs_pred <- append(train$Confirmed,pred)
 ggplot(data=maharash,aes(x=num_day,y=Confirmed)) + geom_line(col='blue') + geom_line(aes(y=obs_pred),col='red')
-
 
 # Try same model for West bengal
 
@@ -117,9 +117,12 @@ train <- west_bengal[seq(1:train_ind), ]
 test <- west_bengal[-seq(1:train_ind), ]
 
 # first model
-model <- glm(Confirmed ~ yesterday_confirmed+num_day+TotalSamples,train,family = gaussian())
+model <- glm(Confirmed ~ yesterday_confirmed+num_day+TotalSamples,train,
+             family = gaussian())
 summary(model)
 # plot(model)
+
+?glm
 
 # here Pietro's idea is used but it is changed a bit,
 # predictions are done by taking the yesterday's prediction because we don't know normally 
@@ -157,6 +160,67 @@ obs_pred <- append(train$Confirmed,pred)
 ggplot(data=west_bengal,aes(x=num_day,y=Confirmed)) + geom_line(col='blue') + geom_line(aes(y=obs_pred),col='red')
 
 
+jharkhand <- filter(data_merged,State == "Jharkhand")
+
+# Adding days and yesterday's confirmed case to dataframe
+liste <- c(0)
+liste <- c(liste,jharkhand$Confirmed[c(1:(length(jharkhand$Confirmed)-1))])
+jharkhand$yesterday_confirmed <- liste
+jharkhand$num_day <- seq(1:nrow(jharkhand))
+
+plot(jharkhand$Confirmed)
+
+# train-test split, last 1 week as a test set
+
+#smp_size <- floor(0.80 * nrow(maharash)) # 80% of the sample size
+train_ind <- nrow(jharkhand) - 7 
+train <- jharkhand[seq(1:train_ind), ]
+test <- jharkhand[-seq(1:train_ind), ]
+
+# first model
+model <- glm(Confirmed ~ yesterday_confirmed+num_day+TotalSamples,train,
+             family = gaussian(link = "sqrt"))
+summary(model)
+# plot(model)
+
+?glm
+
+# here Pietro's idea is used but it is changed a bit,
+# predictions are done by taking the yesterday's prediction because we don't know normally 
+# yesterday's confirmed cases so best we can do is taking our prediction it is done by modifying
+# "yesterday_confirmed" column also predictions are stored in pred vector
+
+pred <- c()
+for(i in 2:8){
+  # reinsert the predicted value into the model to predict the next one
+  predicted_value <- predict(model, newdata = test[i-1, ])
+  pred <- c(pred,predicted_value)
+  if (i != 8) {
+    test$yesterday_confirmed[i] <- predicted_value  
+  }
+}
+
+# comparing predictions and real values
+pred
+test$Confirmed
+#test$yesterday_confirmed
+
+# we underestimate the trend maybe good idea to do something to increase it
+plot(test$Confirmed)
+lines(pred,col="red")
+
+# MSE and MAD check
+mean((test$Confirmed - pred)^2/(nrow(test)))
+mad((test$Confirmed - pred)/(nrow(test)))
+
+library(ggplot2)
+
+# here observation + predictions are created for plotting purpose otherwise I got error since
+# two dataframe don't have same length
+obs_pred <- append(train$Confirmed,pred)
+ggplot(data=jharkhand,aes(x=num_day,y=Confirmed)) + geom_line(col='blue') + geom_line(aes(y=obs_pred),col='red')
+
+
 
 
 
@@ -172,14 +236,14 @@ ggplot(data=west_bengal,aes(x=num_day,y=Confirmed)) + geom_line(col='blue') + ge
 
 # Prophet
 prop_data <- filter(data,State == "Maharashtra")
-prop_data <- prop_data %>% select("Date","Confirmed")
+prop_data <- maharash %>% select("Date","daily")
 
 prop_data$Date <- as.character(prop_data$Date)
 prop_data$Date <-  as.Date(prop_data$Date)
 
 colnames(prop_data)
 
-prop_data <- rename(prop_data, ds = Date,y = Confirmed)
+prop_data <- rename(prop_data, ds = Date,y = daily)
 
 library(prophet)
 
