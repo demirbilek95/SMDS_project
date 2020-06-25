@@ -3,7 +3,7 @@
 library(tidyr)
 
 # import covid_india_19_filtered
-india_19 <- read.csv('data/covid_19_india_filtered.csv',
+india_19 <- read.csv('data/filtered_data/covid_19_india_filtered.csv',
                      row.names=1)
 
 states <- as.list(levels(india_19$State)) # take the states
