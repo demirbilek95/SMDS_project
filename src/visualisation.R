@@ -6,18 +6,19 @@ covid_19 <- read.csv("data/covid_19_india_filtered.csv")
 states <- unique(covid_19$State)
 
 ggplot(covid_19)+
-  geom_point(aes(X,Confirmed-Deaths-Cured))+
-  geom_point(aes(X,Deaths), color="red") +
-  geom_point(aes(X,Cured), color="green") +
+  geom_point(aes(X,Confirmed))+
+  geom_point(aes(X,Deaths), color="red", shape=20) +
+  geom_point(aes(X,Cured), color="green", shape=20) +
   facet_wrap(vars(State), scales="free_y")
 
-ggsave("plots/infect+death+cured_facets.png", width = 10, height=8 )
+ggsave("plots/confirmed+death+cured_facets.png", width = 10, height=8 )
 
-testing_details <- read.csv("data/testing_filtered.csv")
+#plot testing data facets
+testing_details <- read.csv("data/testing_filtered_filled.csv")
 ggplot(testing_details)+
   geom_point(aes(Date,TotalSamples))+
-  geom_point(aes(Date,Positive), color="red") +
-  geom_point(aes(Date,Negative), color="green") +
+  geom_point(aes(Date,Positive), color="red", shape=20) +
+  geom_point(aes(Date,Negative), color="green", shape=20) +
   facet_wrap(vars(State), scales="free_y")
 
 ggsave("plots/tests_facets.png", width = 10, height=8 )
