@@ -1,6 +1,6 @@
 library(tidyverse)
 
-data <- read.csv("data/ind_data_merged.csv")
+data <- read.csv("data/covid_19_india.csv")
 head(data)
 
 colnames(data)
@@ -28,6 +28,9 @@ liste <- c(0)
 liste <- c(liste,maharash$Confirmed[c(1:(length(maharash$Confirmed)-1))])
 maharash$yesterday_confirmed <- liste
 maharash$num_day <- seq(1:nrow(maharash))
+
+maharash$daily <- maharash$Confirmed - maharash$yesterday_confirmed
+plot(maharash$daily)
 
 # train-test split, last 1 week as a test set
 
@@ -92,6 +95,7 @@ model <- glm(Confirmed ~ 0 + yesterday_confirmed+num_day,train,family = Gamma(li
 ?glm
 pred_train <- predict(model, newdata = train)
 pred_test <- predict(model, newdata = test)
+
 
 options("scipen"=100, "digits"=4)
 test$Confirmed
