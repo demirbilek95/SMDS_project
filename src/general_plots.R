@@ -13,7 +13,7 @@ data_plot$Date = NULL
 colnames <- colnames(data_plot)
 colnames[4] <- "Madhya Pradesh"
 colnames[7] <- "West Bengal"
-
+colnames(data_plot)
 data_plot[2,] <- colnames # Adding state names as row
 
 data_plot <- data.frame(t(data_plot))

@@ -61,6 +61,6 @@ write.csv(pop_census, "data/filtered_data/pop_census_filtered.csv")
 write.csv(testing_details, "data/filtered_data/testing_filtered.csv")
 write.csv(testing_lab, "data/filtered_data/lab_filtered.csv")
 write.csv(hospital, "data/filtered_data/hospital.csv")
-write.csv(covid_19_india, "data/covid_19_india.csv")
+write.csv(ind_data_merged, "data/ind_data_merged.csv")
 
 
