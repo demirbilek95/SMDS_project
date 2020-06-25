@@ -97,6 +97,19 @@ for (s in states){
   
 }
 
+#fix pop_census
+pop_census<- pop_census %>% 
+  select(State, Population, Rural.population, Urban.population,
+         Area, Density, Gender.Ratio) %>%
+  extract(Area, "Area", "(\\d+,\\d+).*", convert= TRUE) %>%
+  extract(Density, "Density", "(.+)/k.*", convert= TRUE) 
+
+strcommaToNum <- function(s){
+  return(as.numeric(gsub(",","",s)))
+}  
+pop_census$Density <- strcommaToNum(pop_census$Density)
+pop_census$Area <- strcommaToNum(pop_census$Area)
+
 #save files
 write.csv(covid_19_india, "data/covid_19_india_filtered.csv")
 write.csv(pop_census, "data/pop_census_filtered.csv")
