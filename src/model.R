@@ -1,13 +1,25 @@
 library(tidyverse)
+library(lubridate)
 
+# read the data
 data <- read.csv("data/covid_19_india.csv")
+# dmy and ymd is just for bringing date columns in to same format
+data$Date <- dmy(data$Date)
+testing_details <- read.csv("data/testing_filtered_filled.csv")
+testing_details$Date <- ymd(testing_details$Date)
+str(data)
+str(testing_details)
+
+#merging testing details and covid_india
+data_merged <- merge(data, testing_details,by = c("Date","State"))
+
 head(data)
 
-colnames(data)
+# change the column name X to num_day
+colnames(data_merged)[3] = "num_day"
+colnames(data_merged)
 
-data$X = NULL
-
-str(data)
+str(data_merged)
 
 # normalize <- function(x) {
 #   return ((x - min(x)) / (max(x) - min(x)))
@@ -21,92 +33,120 @@ str(data)
 
 # First model for Maharash
 
-maharash <- filter(data,State == "Maharashtra")
+maharash <- filter(data_merged,State == "Maharashtra")
 
 # Adding days and yesterday's confirmed case to dataframe
 liste <- c(0)
 liste <- c(liste,maharash$Confirmed[c(1:(length(maharash$Confirmed)-1))])
 maharash$yesterday_confirmed <- liste
-maharash$num_day <- seq(1:nrow(maharash))
 
-maharash$daily <- maharash$Confirmed - maharash$yesterday_confirmed
-plot(maharash$daily)
+plot(maharash$Confirmed)
 
 # train-test split, last 1 week as a test set
 
 #smp_size <- floor(0.80 * nrow(maharash)) # 80% of the sample size
 train_ind <- nrow(maharash) - 7 
 train <- maharash[seq(1:train_ind), ]
-train$Date <- as.character(train$Date)
-train$yesterday_confirmed <- as.integer(train$yesterday_confirmed)
-train <- train[order(train$Date),]
 test <- maharash[-seq(1:train_ind), ]
 
-model <- glm(Confirmed ~ 0 + yesterday_confirmed+num_day,train,family = Gamma(link = "identity"),start = c(0,110))
+# first model
+model <- glm(Confirmed ~ yesterday_confirmed+num_day+TotalSamples,train,family = Gamma(link = "identity"))
 summary(model)
 # plot(model)
 
-pred_train <- predict(model, newdata = train)
-plot(train$Confirmed)
-lines(pred_train,col="red")
+# here Pietro's idea is used but it is changed a bit,
+# predictions are done by taking the yesterday's prediction because we don't know normally 
+# yesterday's confirmed cases so best we can do is taking our prediction it is done by modifying
+# "yesterday_confirmed" column also predictions are stored in pred vector
 
-pred_test <- predict(model, newdata = test)
-options("scipen"=100, "digits"=4)
+pred <- c()
+for(i in 2:8){
+  # reinsert the predicted value into the model to predict the next one
+  predicted_value <- predict(model, newdata = test[i-1, ])
+  pred <- c(pred,predicted_value)
+  if (i != 8) {
+    test$yesterday_confirmed[i] <- predicted_value  
+  }
+}
+
+# comparing predictions and real values
+pred
 test$Confirmed
-pred_test
+#test$yesterday_confirmed
+
+# we underestimate the trend maybe good idea to do something to increase it
 plot(test$Confirmed)
-lines(pred_test,col="red")
+lines(pred,col="red")
 
-mean((test$Confirmed - pred_test)^2/(nrow(test)))
-mad((test$Confirmed - pred_test)/(nrow(test)))
-
-colnames(maharash)
-
-pred <- predict(model, newdata = maharash)
-
-nrow(maharash)
+# MSE and MAD check
+mean((test$Confirmed - pred)^2/(nrow(test)))
+mad((test$Confirmed - pred)/(nrow(test)))
 
 library(ggplot2)
 
-ggplot(data=maharash,aes(x=num_day,y=Confirmed)) + geom_line(col='blue') + geom_line(aes(y=pred),col='red')
+# here observation + predictions are created for plotting purpose otherwise I got error since
+# two dataframe don't have same length
+obs_pred <- append(train$Confirmed,pred)
+ggplot(data=maharash,aes(x=num_day,y=Confirmed)) + geom_line(col='blue') + geom_line(aes(y=obs_pred),col='red')
 
-unique(data$State)
 
 # Try same model for West bengal
 
-west_bengal <- filter(data,State == "West Bengal")
+west_bengal <- filter(data_merged,State == "West Bengal")
 
 # Adding days and yesterday's confirmed case to dataframe
 liste <- c(0)
 liste <- c(liste,west_bengal$Confirmed[c(1:(length(west_bengal$Confirmed)-1))])
 west_bengal$yesterday_confirmed <- liste
-west_bengal$num_day <- seq(1:nrow(west_bengal))
+
+plot(west_bengal$Confirmed)
+
+# train-test split, last 1 week as a test set
 
 #smp_size <- floor(0.80 * nrow(maharash)) # 80% of the sample size
 train_ind <- nrow(west_bengal) - 7 
 train <- west_bengal[seq(1:train_ind), ]
-train$Date <- as.character(train$Date)
-train <- train[order(train$Date),]
 test <- west_bengal[-seq(1:train_ind), ]
 
+# first model
+model <- glm(Confirmed ~ yesterday_confirmed+num_day+TotalSamples,train,family = Gamma(link = "identity"))
+summary(model)
+# plot(model)
 
-model <- glm(Confirmed ~ 0 + yesterday_confirmed+num_day,train,family = Gamma(link = "identity"),start = c(0,110))
+# here Pietro's idea is used but it is changed a bit,
+# predictions are done by taking the yesterday's prediction because we don't know normally 
+# yesterday's confirmed cases so best we can do is taking our prediction it is done by modifying
+# "yesterday_confirmed" column also predictions are stored in pred vector
 
-?glm
-pred_train <- predict(model, newdata = train)
-pred_test <- predict(model, newdata = test)
+pred <- c()
+for(i in 2:8){
+  # reinsert the predicted value into the model to predict the next one
+  predicted_value <- predict(model, newdata = test[i-1, ])
+  pred <- c(pred,predicted_value)
+  if (i != 8) {
+    test$yesterday_confirmed[i] <- predicted_value  
+  }
+}
 
-
-options("scipen"=100, "digits"=4)
+# comparing predictions and real values
+pred
 test$Confirmed
-pred_test
+#test$yesterday_confirmed
 
-pred <- predict(model, newdata = west_bengal)
+# we underestimate the trend maybe good idea to do something to increase it
+plot(test$Confirmed)
+lines(pred,col="red")
 
-ggplot(data=west_bengal,aes(x=num_day,y=Confirmed)) + geom_line(col='blue') + geom_line(aes(y=pred),col='red')
+# MSE and MAD check
+mean((test$Confirmed - pred)^2/(nrow(test)))
+mad((test$Confirmed - pred)/(nrow(test)))
 
+library(ggplot2)
 
-
+# here observation + predictions are created for plotting purpose otherwise I got error since
+# two dataframe don't have same length
+obs_pred <- append(train$Confirmed,pred)
+ggplot(data=west_bengal,aes(x=num_day,y=Confirmed)) + geom_line(col='blue') + geom_line(aes(y=obs_pred),col='red')
 
 
 
