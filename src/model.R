@@ -16,7 +16,7 @@ data_merged <- merge(data, testing_details,by = c("Date","State"))
 head(data)
 
 # change the column name X to num_day
-colnames(data_merged)[3] = "num_day"
+
 colnames(data_merged)
 
 str(data_merged)
@@ -39,6 +39,7 @@ maharash <- filter(data_merged,State == "Maharashtra")
 liste <- c(0)
 liste <- c(liste,maharash$Confirmed[c(1:(length(maharash$Confirmed)-1))])
 maharash$yesterday_confirmed <- liste
+maharash$num_day <- seq(1:nrow(maharash))
 
 plot(maharash$Confirmed)
 
@@ -50,9 +51,12 @@ train <- maharash[seq(1:train_ind), ]
 test <- maharash[-seq(1:train_ind), ]
 
 # first model
-model <- glm(Confirmed ~ yesterday_confirmed+num_day+TotalSamples,train,family = Gamma(link = "identity"))
+
+model <- glm(Confirmed ~ yesterday_confirmed+num_day+TotalSamples,train,family = gaussian())
+?glm
 summary(model)
 # plot(model)
+model$coefficients
 
 # here Pietro's idea is used but it is changed a bit,
 # predictions are done by taking the yesterday's prediction because we don't know normally 
@@ -73,6 +77,9 @@ for(i in 2:8){
 pred
 test$Confirmed
 #test$yesterday_confirmed
+
+
+
 
 # we underestimate the trend maybe good idea to do something to increase it
 plot(test$Confirmed)
@@ -98,6 +105,7 @@ west_bengal <- filter(data_merged,State == "West Bengal")
 liste <- c(0)
 liste <- c(liste,west_bengal$Confirmed[c(1:(length(west_bengal$Confirmed)-1))])
 west_bengal$yesterday_confirmed <- liste
+west_bengal$num_day <- seq(1:nrow(west_bengal))
 
 plot(west_bengal$Confirmed)
 
@@ -109,7 +117,7 @@ train <- west_bengal[seq(1:train_ind), ]
 test <- west_bengal[-seq(1:train_ind), ]
 
 # first model
-model <- glm(Confirmed ~ yesterday_confirmed+num_day+TotalSamples,train,family = Gamma(link = "identity"))
+model <- glm(Confirmed ~ yesterday_confirmed+num_day+TotalSamples,train,family = gaussian())
 summary(model)
 # plot(model)
 
