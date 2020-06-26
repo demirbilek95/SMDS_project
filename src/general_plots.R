@@ -19,8 +19,15 @@ data_plot[2,] <- colnames # Adding state names as row
 data_plot <- data.frame(t(data_plot))
 data_plot <- rename(data_plot, State = "X2",Confirmed = "X105")
 data_plot$Confirmed <- as.numeric(paste(data_plot$Confirmed))
+data_plot$Confirmed_perc <- paste(round((data_plot$Confirmed/sum(data_plot$Confirmed))*100, 2), "%")
 
-ggplot(data_plot,aes(x=State, y = Confirmed)) + geom_bar(stat = "identity") 
+ggplot(data_plot,aes(x=State, y = Confirmed, fill = State)) + 
+  geom_bar(stat = "identity") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  geom_text(aes(label = Confirmed_perc), vjust = -0.25) +
+  theme(legend.position="none") +
+  labs(title = "Confirmed cases in central India")
+
 #ggsave(paste0("plots/total_confirmed_states.png"))
 
 #########################################################################
