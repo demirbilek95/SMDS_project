@@ -20,5 +20,3 @@ for (state in states) {
     labs(x = "Time", y = "Infected", title = paste("State", state))
   ggsave(paste0("plots/", "infected_", state, ".png"))
 }
-
-
