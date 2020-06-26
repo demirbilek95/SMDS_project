@@ -1,8 +1,11 @@
-library(tidyverse)
-library(lubridate)
+library(tidyverse) # data manipulatinon
+library(lubridate) # for date formatting
+library(ggplot2) # for plotting
+
+# Preparing Data
 
 # read the data
-data <- read.csv("data/covid_19_india.csv")
+data <- read.csv("data/covid_19_india.csv")  # do not forget to change path
 # dmy and ymd is just for bringing date columns in to same format
 data$Date <- dmy(data$Date)
 testing_details <- read.csv("data/testing_filtered_filled.csv")
@@ -10,17 +13,16 @@ testing_details$Date <- ymd(testing_details$Date)
 str(data)
 str(testing_details)
 
-#merging testing details and covid_india
+#merging testing details and covid_india by Date and State
 data_merged <- merge(data, testing_details,by = c("Date","State"))
 
 head(data)
-
-# change the column name X to num_day
 
 colnames(data_merged)
 
 str(data_merged)
 
+# This part can be useful later to bring covariates to same scale
 # normalize <- function(x) {
 #   return ((x - min(x)) / (max(x) - min(x)))
 # }
@@ -31,227 +33,80 @@ str(data_merged)
 # data$Urban.population <- normalize(data$Urban.population)
 # data$num_lab <- normalize(data$num_lab)
 
-# First model for Maharash
 
-maharash <- filter(data_merged,State == "Maharashtra")
 
-# Adding days and yesterday's confirmed case to dataframe
-liste <- c(0)
-liste <- c(liste,maharash$Confirmed[c(1:(length(maharash$Confirmed)-1))])
-maharash$yesterday_confirmed <- liste
-maharash$num_day <- seq(1:nrow(maharash))
-maharash$daily <- maharash$Confirmed - maharash$yesterday_confirmed
-maharash$daily[maharash$daily < 0] <- 0
+# It is the function that prepare the data 
+# for model and get some results (plots, tests, predictions etc) from trained model
+# for state you can use the unique(data_merged$State)
+# for family and link please chech the run ?glm
 
-plot(maharash$daily)
-plot(maharash$Confirmed)
-
-# train-test split, last 1 week as a test set
-
-#smp_size <- floor(0.80 * nrow(maharash)) # 80% of the sample size
-train_ind <- nrow(maharash) - 7 
-train <- maharash[seq(1:train_ind), ]
-test <- maharash[-seq(1:train_ind), ]
-
-# first model
-
-model <- glm(Confirmed ~ yesterday_confirmed+num_day+TotalSamples,train,
-             family = gaussian())
-?glm
-summary(model)
-# plot(model)
-model$coefficients
-
-# here Pietro's idea is used but it is changed a bit,
-# predictions are done by taking the yesterday's prediction because we don't know normally 
-# yesterday's confirmed cases so best we can do is taking our prediction it is done by modifying
-# "yesterday_confirmed" column also predictions are stored in pred vector
-
-pred <- c()
-for(i in 2:8){
-  # reinsert the predicted value into the model to predict the next one
-  predicted_value <- predict(model, newdata = test[i-1, ])
-  pred <- c(pred,predicted_value)
-  if (i != 8) {
-    test$yesterday_confirmed[i] <- predicted_value  
+model <- function(state, glm_model_family, link_func) {
+  # filter the given state from general dataframe
+  df <- filter(data_merged,State == state)
+  
+  # Adding days and yesterday's confirmed case to dataframe
+  liste <- c(0)
+  liste <- c(liste,df$Confirmed[c(1:(length(df$Confirmed)-1))])
+  df$yesterday_confirmed <- liste
+  df$num_day <- seq(1:nrow(df))
+  df$daily <- df$Confirmed - df$yesterday_confirmed
+  df$daily[df$daily < 0] <- 0
+  
+  # plot what we may try to forecast
+  par(mfrow=c(1,2))
+  plot(df$daily)
+  plot(df$Confirmed)
+  
+  # train-test split, last 1 week as a test set can be 10 days or 14 days
+  train_ind <- nrow(df) - 7 
+  train <- df[seq(1:train_ind), ]
+  test <- df[-seq(1:train_ind), ]
+  
+  # most basic model that we can have, we all need to study theory for this part
+  # simply we may play with covariates,formula, family and link func
+  model <- glm(Confirmed ~ yesterday_confirmed+num_day+TotalSamples,train,
+               family = gaussian())
+  
+  # to see if coefficients are significant as well as model etc
+  summary(model)
+  
+  # here Pietro's idea is used but it is changed a bit,
+  # predictions are done by taking the yesterday's prediction because we don't know normally 
+  # yesterday's confirmed cases so best we can do is taking our prediction, it is done by modifying
+  # "yesterday_confirmed" column also predictions are stored in pred vector
+  
+  pred <- c()
+  for(i in 2:8){
+    # reinsert the predicted value into the model to predict the next one
+    predicted_value <- predict(model, newdata = test[i-1, ])
+    pred <- c(pred,predicted_value)
+    if (i != 8) {
+      test$yesterday_confirmed[i] <- predicted_value  
+    }
   }
+  
+  # comparing predictions and real values
+  cat("predictions:",pred)
+  cat("\nreal values",test$Confirmed)
+  
+  # just plotting test set and predictins together
+  plot(test$Confirmed)
+  lines(pred,col="red")
+  
+  # MSE and MAD check
+  mean((test$Confirmed - pred)^2/(nrow(test)))
+  mad((test$Confirmed - pred)/(nrow(test)))
+  
+  # here observation + predictions are created for plotting purpose otherwise I got error since
+  # two dataframe don't have same length
+  # this part just to see our model and observations, can be plotted better for sure, adding legend etc
+  # red is model, blue is observations
+  
+  obs_pred <- append(train$Confirmed,pred)
+  ggplot(data=df,aes(x=num_day,y=Confirmed)) + geom_line(col='blue') + geom_line(aes(y=obs_pred),col='red')
+  
 }
 
-# comparing predictions and real values
-pred
-test$Confirmed
-#test$yesterday_confirmed
+model("Maharashtra",gaussian,"identity")
 
-
-# we underestimate the trend maybe good idea to do something to increase it
-plot(test$Confirmed)
-lines(pred,col="red")
-
-# MSE and MAD check
-mean((test$Confirmed - pred)^2/(nrow(test)))
-mad((test$Confirmed - pred)/(nrow(test)))
-
-library(ggplot2)
-# here observation + predictions are created for plotting purpose otherwise I got error since
-# two dataframe don't have same length
-obs_pred <- append(train$Confirmed,pred)
-ggplot(data=maharash,aes(x=num_day,y=Confirmed)) + geom_line(col='blue') + geom_line(aes(y=obs_pred),col='red')
-
-# Try same model for West bengal
-
-west_bengal <- filter(data_merged,State == "West Bengal")
-
-# Adding days and yesterday's confirmed case to dataframe
-liste <- c(0)
-liste <- c(liste,west_bengal$Confirmed[c(1:(length(west_bengal$Confirmed)-1))])
-west_bengal$yesterday_confirmed <- liste
-west_bengal$num_day <- seq(1:nrow(west_bengal))
-
-plot(west_bengal$Confirmed)
-
-# train-test split, last 1 week as a test set
-
-#smp_size <- floor(0.80 * nrow(maharash)) # 80% of the sample size
-train_ind <- nrow(west_bengal) - 7 
-train <- west_bengal[seq(1:train_ind), ]
-test <- west_bengal[-seq(1:train_ind), ]
-
-# first model
-model <- glm(Confirmed ~ yesterday_confirmed+num_day+TotalSamples,train,
-             family = gaussian())
-summary(model)
-# plot(model)
-
-?glm
-
-# here Pietro's idea is used but it is changed a bit,
-# predictions are done by taking the yesterday's prediction because we don't know normally 
-# yesterday's confirmed cases so best we can do is taking our prediction it is done by modifying
-# "yesterday_confirmed" column also predictions are stored in pred vector
-
-pred <- c()
-for(i in 2:8){
-  # reinsert the predicted value into the model to predict the next one
-  predicted_value <- predict(model, newdata = test[i-1, ])
-  pred <- c(pred,predicted_value)
-  if (i != 8) {
-    test$yesterday_confirmed[i] <- predicted_value  
-  }
-}
-
-# comparing predictions and real values
-pred
-test$Confirmed
-#test$yesterday_confirmed
-
-# we underestimate the trend maybe good idea to do something to increase it
-plot(test$Confirmed)
-lines(pred,col="red")
-
-# MSE and MAD check
-mean((test$Confirmed - pred)^2/(nrow(test)))
-mad((test$Confirmed - pred)/(nrow(test)))
-
-library(ggplot2)
-
-# here observation + predictions are created for plotting purpose otherwise I got error since
-# two dataframe don't have same length
-obs_pred <- append(train$Confirmed,pred)
-ggplot(data=west_bengal,aes(x=num_day,y=Confirmed)) + geom_line(col='blue') + geom_line(aes(y=obs_pred),col='red')
-
-
-jharkhand <- filter(data_merged,State == "Jharkhand")
-
-# Adding days and yesterday's confirmed case to dataframe
-liste <- c(0)
-liste <- c(liste,jharkhand$Confirmed[c(1:(length(jharkhand$Confirmed)-1))])
-jharkhand$yesterday_confirmed <- liste
-jharkhand$num_day <- seq(1:nrow(jharkhand))
-
-plot(jharkhand$Confirmed)
-
-# train-test split, last 1 week as a test set
-
-#smp_size <- floor(0.80 * nrow(maharash)) # 80% of the sample size
-train_ind <- nrow(jharkhand) - 7 
-train <- jharkhand[seq(1:train_ind), ]
-test <- jharkhand[-seq(1:train_ind), ]
-
-# first model
-model <- glm(Confirmed ~ yesterday_confirmed+num_day+TotalSamples,train,
-             family = gaussian(link = "sqrt"))
-summary(model)
-# plot(model)
-
-?glm
-
-# here Pietro's idea is used but it is changed a bit,
-# predictions are done by taking the yesterday's prediction because we don't know normally 
-# yesterday's confirmed cases so best we can do is taking our prediction it is done by modifying
-# "yesterday_confirmed" column also predictions are stored in pred vector
-
-pred <- c()
-for(i in 2:8){
-  # reinsert the predicted value into the model to predict the next one
-  predicted_value <- predict(model, newdata = test[i-1, ])
-  pred <- c(pred,predicted_value)
-  if (i != 8) {
-    test$yesterday_confirmed[i] <- predicted_value  
-  }
-}
-
-# comparing predictions and real values
-pred
-test$Confirmed
-#test$yesterday_confirmed
-
-# we underestimate the trend maybe good idea to do something to increase it
-plot(test$Confirmed)
-lines(pred,col="red")
-
-# MSE and MAD check
-mean((test$Confirmed - pred)^2/(nrow(test)))
-mad((test$Confirmed - pred)/(nrow(test)))
-
-library(ggplot2)
-
-# here observation + predictions are created for plotting purpose otherwise I got error since
-# two dataframe don't have same length
-obs_pred <- append(train$Confirmed,pred)
-ggplot(data=jharkhand,aes(x=num_day,y=Confirmed)) + geom_line(col='blue') + geom_line(aes(y=obs_pred),col='red')
-
-
-
-
-
-
-
-
-
-
-
-
-
-# Basic Time Series Model (Just in Case)
-
-# Prophet
-prop_data <- filter(data,State == "Maharashtra")
-prop_data <- maharash %>% select("Date","daily")
-
-prop_data$Date <- as.character(prop_data$Date)
-prop_data$Date <-  as.Date(prop_data$Date)
-
-colnames(prop_data)
-
-prop_data <- rename(prop_data, ds = Date,y = daily)
-
-library(prophet)
-
-m <- prophet(prop_data)
-future <- make_future_dataframe(m, periods = 14)
-tail(future)
-forecast <- predict(m, future)
-tail(forecast[c('ds', 'yhat', 'yhat_lower', 'yhat_upper')])
-plot(m, forecast)
-prophet_plot_components(m, forecast)
-
+model("Jharkhand", gaussian, "identity")
