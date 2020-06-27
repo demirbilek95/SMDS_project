@@ -140,6 +140,12 @@ for (index in 1:7) {
   
   predict <- prediction(test, model)
   predict_sqrd <- prediction(test, model2)
+  print("")
+  (data_frames[[index]] %>%
+      select(State) %>%
+      unique)[1,] %>% 
+      paste("STATE:", .) %>% 
+      print
   print("MSE and MAD of predictor")
   print(mean((test$Confirmed - predict)^2/(nrow(test))))
   print(mad((test$Confirmed - predict)/(nrow(test))))
