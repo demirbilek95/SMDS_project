@@ -49,6 +49,7 @@ add_daily_and_yesterd_cols <- function(data_f){
 
 data_frames <- list()
 models <- list()
+models_sqrd <- list()
 i <- 1
 for (state in states) {
   filtered <- 
@@ -62,27 +63,46 @@ for (state in states) {
   train <- filtered[seq(1:train_ind), ]
   test <- filtered[-seq(1:train_ind), ]
   
+  model <- lm(Confirmed ~ yesterday_confirmed+num_day+TotalSamples,
+                   train
+  )
   
-  model <- lm(Confirmed ~ yesterday_confirmed+num_day+TotalSamples+I(num_day^2),
+  model_sqrd <- lm(Confirmed ~ yesterday_confirmed+num_day+TotalSamples+I(num_day^2),
                train
                )
   
-  models[[i]] <- model
   
-  png(paste0("plots/model_diagnostics/normal/", state, "_diagnostics_squared.png"))
+  models[[i]] <- model
+  models_sqrd[[i]] <-  model_sqrd
+  
+  png(paste0("plots/model_diagnostics/normal/", state, "_diagnostics.png"))
   par(mfrow=c(2,2))
   plot(model)
+  dev.off
+  
+  png(paste0("plots/model_diagnostics/normal/", state, "_diagnostics_sqrd.png"))
+  par(mfrow=c(2,2))
+  plot(model_sqrd)
   dev.off()
   
+  
   predict <- prediction(test, model)
+  predict_sqrd <- prediction(test, model_sqrd)
+  
   
   obs_pred <- append(train$Confirmed, predict)
   ggplot(data=filtered, aes(x=num_day, y=Confirmed)) +
     geom_line(col = 'blue') +
     geom_line(aes(y = obs_pred), col = 'red') +
     labs(x = "days", y = "Confirmed", title = state, legend = "Blue = real data; Red: prediction")
-  ggsave(paste0("plots/pred/normal/", state, "_predictions_squared.png"))
+  ggsave(paste0("plots/pred/normal/", state, "_predictions.png"))
   
+  obs_pred_sqrd <- append(train$Confirmed, predict_sqrd)
+  ggplot(data=filtered, aes(x=num_day, y=Confirmed)) +
+    geom_line(col = 'blue') +
+    geom_line(aes(y = obs_pred_sqrd), col = 'red') +
+    labs(x = "days", y = "Confirmed", title = state, legend = "Blue = real data; Red: prediction")
+  ggsave(paste0("plots/pred/normal/", state, "_predictions_sqrd.png"))
         
   i <- i + 1
 }
@@ -117,6 +137,16 @@ for (index in 1:7) {
   model2 <- lm(Confirmed ~ yesterday_confirmed+num_day+TotalSamples+I(num_day^2),
                train
   )
+  
+  predict <- prediction(test, model)
+  predict_sqrd <- prediction(test, model2)
+  print("MSE and MAD of predictor")
+  print(mean((test$Confirmed - predict)^2/(nrow(test))))
+  print(mad((test$Confirmed - predict)/(nrow(test))))
+  
+  print("MSE and MAD of sqrd predictor")
+  print(mean((test$Confirmed - predict_sqrd)^2/(nrow(test))))
+  print(mad((test$Confirmed - predict_sqrd)/(nrow(test))))
   
   print(anova(model, model2))
 }
