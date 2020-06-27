@@ -27,7 +27,7 @@ prediction <- function(test_data, model){
   pred <- c()
   for(i in 2:8){
     # reinsert the predicted value into the model to predict the next one
-    predicted_value <- predict(model, newdata = test_data[i-1, ])
+    predicted_value <- predict(model, newdata = test_data[i-1, ], type = "response")
     pred <- c(pred, predicted_value)
     if (i != 8) {
       test$yesterday_confirmed[i] <- predicted_value  
@@ -63,11 +63,13 @@ for (state in states) {
   test <- filtered[-seq(1:train_ind), ]
   
   
-  model <- glm(Confirmed ~ yesterday_confirmed+num_day+TotalSamples, train,
-               family = gaussian())
+  model <- lm(Confirmed ~ yesterday_confirmed+num_day+TotalSamples+I(num_day^2),
+               train
+               )
+  
   models[[i]] <- model
   
-  png(paste0("plots/model_diagnostics/", state, "_diagnostics.png"))
+  png(paste0("plots/model_diagnostics/normal/", state, "_diagnostics_squared.png"))
   par(mfrow=c(2,2))
   plot(model)
   dev.off()
@@ -79,11 +81,44 @@ for (state in states) {
     geom_line(col = 'blue') +
     geom_line(aes(y = obs_pred), col = 'red') +
     labs(x = "days", y = "Confirmed", title = state, legend = "Blue = real data; Red: prediction")
-  ggsave(paste0("plots/pred/", state, "_predictions.png"))
+  ggsave(paste0("plots/pred/normal/", state, "_predictions_squared.png"))
   
         
   i <- i + 1
 }
 
+for (index in 1:7) {
+  summary(models[[index]], correlation = TRUE)
+  train_ind <- nrow(data_frames[[index]]) - 7 
+  train <- data_frames[[index]][seq(1:train_ind), ]
+  test <- data_frames[[index]][-seq(1:train_ind), ]
+  
+  model <- lm(Confirmed ~ yesterday_confirmed+num_day+TotalSamples,
+              train
+  )
+  
+  model2 <- lm(Confirmed ~ num_day+TotalSamples,
+               train
+  )
+  
+  print(anova(model, model2))
+}
+
+for (index in 1:7) {
+  summary(models[[index]], correlation = TRUE)
+  train_ind <- nrow(data_frames[[index]]) - 7 
+  train <- data_frames[[index]][seq(1:train_ind), ]
+  test <- data_frames[[index]][-seq(1:train_ind), ]
+  
+  model <- lm(Confirmed ~ yesterday_confirmed+num_day+TotalSamples,
+              train
+  )
+  
+  model2 <- lm(Confirmed ~ yesterday_confirmed+num_day+TotalSamples+I(num_day^2),
+               train
+  )
+  
+  print(anova(model, model2))
+}
 
 

@@ -13,6 +13,13 @@ ggplot(covid_19)+
 
 ggsave("plots/infect+death+cured_facets.png", width = 10, height=8 )
 
+
+ggplot(covid_19)+
+  geom_point(aes(X,Confirmed))+
+  facet_wrap(vars(State), scales="free_y")
+
+ggsave("plots/confirmed_facets.png", width = 10, height=8 )
+
 for (state in states) {
   covid_19 %>% 
     ggplot(aes(x = X, y = !!ensym(state))) + # !!ensym transforms a string to a symbol
