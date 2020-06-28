@@ -1,0 +1,172 @@
+library(tidyverse) # data manipulatinon
+library(DAAG)
+library(lubridate)
+library(AER)
+
+# read the data
+data <- read.csv("data/ind_data_merged.csv")  # do not forget to change path
+# dmy and ymd is just for bringing date columns in to same format
+data$Date <- ymd(data$Date)
+testing_details <- read.csv("data/testing_filtered_filled.csv")
+testing_details$Date <- ymd(testing_details$Date)
+str(data)
+str(testing_details)
+
+#merging testing details and covid_india by Date and State
+data_merged <- merge(data, testing_details,by = c("Date","State"))
+
+head(data_merged)
+
+colnames(data_merged)
+
+str(data_merged)
+unique(data_merged$State)
+
+# filter state and add covariates will be used
+
+add_daily <- function(state) {
+    
+  df <- filter(data_merged,State == state)
+  
+  # Adding days and yesterday's confirmed case to dataframe
+  liste <- c(0)
+  liste <- c(liste,df$Confirmed[c(1:(length(df$Confirmed)-1))])
+  df$yesterday_confirmed <- liste
+  df$num_day <- seq(1:nrow(df))
+  df$daily <- df$Confirmed - df$yesterday_confirmed
+  # since our data is noisy, values smaller than 0 are set to 0.
+  df$daily[df$daily < 0] <- 0
+  # Adding yesterday's daily cases
+  liste <- c(0)
+  liste <- c(liste,df$daily[c(1:(length(df$daily)-1))])
+  df$yesterday_daily <- liste
+  return(df)
+}
+
+df <- add_daily("Maharashtra")
+  
+# possible covariates
+df <- df %>% select(daily,yesterday_daily,yesterday_confirmed,num_day, TotalSamples)
+
+# checking dist of covariates and target variables
+
+colnames(df)
+par(mfrow=c(3,2))
+histout=apply(df,2,hist)
+
+# checking covariates relation wtih target variable
+
+plot(df)
+
+par(mfrow=c(1,2))
+# scatterplot matrix with data
+splom(~df[,c("daily","yesterday_daily","num_day","yesterday_confirmed","TotalSamples")],
+      varnames = c("daily","yesterday_daily","num_day","yesterday_confirmed","TotalSamples"))
+
+# train-test split, last 1 week as a test set can be 10 days or 14 days
+train_ind <- nrow(df) - 7 
+train <- df[seq(1:train_ind), ]
+test <- df[-seq(1:train_ind), ]
+
+# so according to this relations I think it is better to have num_day^2 and sqrt(yesterday_confirmed) but in model this 
+# ideas will be checked
+
+model0 <- glm(daily ~ yesterday_daily+TotalSamples+yesterday_confirmed+num_day,family = poisson(),train)
+
+analyze_model <- function(model){
+  
+  print(summary(model, corr = TRUE))
+  
+  # in lab files those plot were used to make better comments (for slides) lab files will be used
+  par(mfrow=c(1,2))
+  plot(model, which=c(1,3))
+  
+  # again from lab files  
+  # fitted values from model
+  pred.pois <- model$fitted.values
+  # standardize residuals
+  res.st <- (train$daily-pred.pois)/sqrt(pred.pois)
+  
+  plot(pred.pois,res.st)
+  abline(h=0,lty=3,col="gray75")
+  
+  print(model$converged)
+}
+
+# here all the coeff seems significant, though there are some problems with residuals, maybe correlation among covariates
+# need to study theory more to make better comments
+analyze_model(model0)
+
+# checking dispersion of this model, and it says we have dispersion so let's use quasipoisson
+dispersiontest(model0,alternative = "greater")
+
+
+model1 <- glm(daily ~ yesterday_daily+TotalSamples+yesterday_confirmed+num_day,family = quasipoisson(),train)
+
+# here some of the coeff are not significant so previously mentioned transforms will be done and there are some problems 
+# with residuals again need to study theory
+analyze_model(model1)
+
+model2 <- glm(daily ~ yesterday_daily+TotalSamples+sqrt(yesterday_confirmed)+num_day^2,family = quasipoisson(),train)
+
+# for now all coeff seems significant maybe additional transformations can be done with reasoning, but still there are some 
+# problems in this model too, for now let's use this
+analyze_model(model2)
+
+
+# I hope it is not overfitting :(, but will try for test set as well and need to check train MSE, MAD and compare with 
+# test MSE MAD
+
+plot(train$daily)
+lines(model2$fitted.values, col = "red")
+
+# this is the problematic part that we need to find solution so for yesterday's daily covariates I used our predictions
+# but still we don't know TotalSamples
+
+make_prediction <- function(model) {
+  
+  pred <- c()
+  for(i in 2:8){
+    # reinsert the predicted value into the model to predict the next one
+    predicted_value <- predict(model, newdata = test[i-1, ],type="response")
+    #print(predicted_value)
+    pred <- c(pred,predicted_value)
+    if (i != 8) {
+      test$yesterday_daily[i] <- predicted_value
+      test$yesterday_confirmed[i] <- predicted_value + test$yesterday_confirmed[i-1]
+    }
+  }
+  cat("predictions:",pred)
+  cat("\nreal values",test$daily)
+  return(pred)
+}
+
+pred <- make_prediction(model2)
+
+# just plotting test set and predictions together
+
+plot(df$daily)
+lines(c(model1$fitted.values,pred),col="red")
+
+obs_pred <- append(model1$fitted.values,pred)
+ggplot(data=df,aes(x=num_day,y=daily)) + geom_line(col='blue') + geom_line(aes(y=obs_pred),col='red')
+
+mse_mad <- function(df,pred) {
+  # MSE and MAD check
+  mse <- mean((df$daily - pred)^2/(nrow(df)))
+  mad <- mad((df$daily - pred)/(nrow(df)))
+  cat("MSE:", mse)
+  cat("\nMAD", mad)
+}
+
+# maybe overfit donno :(
+mse_mad(train, model2$fitted.values)
+mse_mad(test, pred)
+
+# LIMITATIONS
+
+# I am not sure if VIF should be checked, I need to study about it
+# Assumptions of models will be checked -> actions will be taken according to this like transformation etc
+# I am not sure if model like this can be generalized for all states need to check.options
+# I hope there is no overfitting but model worked more or less okay for test data, just prediction problem that we have about
+# covariates that we don't have need to be solved
