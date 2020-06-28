@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.14159265-2.6-1.40.20 (MiKTeX 2.9.7140 64-bit) (preloaded format=pdflatex 2020.6.27)  27 JUN 2020 19:24
+This is pdfTeX, Version 3.14159265-2.6-1.40.20 (MiKTeX 2.9.7140 64-bit) (preloaded format=pdflatex 2020.6.27)  28 JUN 2020 19:05
 entering extended mode
 **./Fabrici_Morichetti_Demirbilek_Rispoli.tex
 (Fabrici_Morichetti_Demirbilek_Rispoli.tex
@@ -941,38 +941,180 @@ Dictionary: translator-numbers-dictionary, Language: English
 ("C:\Users\Eros\AppData\Local\Programs\MiKTeX 2.9\tex/latex/translator\translat
 or-theorem-dictionary-English.dict"
 Dictionary: translator-theorem-dictionary, Language: English 
-) (Fabrici_Morichetti_Demirbilek_Rispoli.nav) [1
+) (Fabrici_Morichetti_Demirbilek_Rispoli.nav) [1{C:/Users/Eros/AppData/Local/Mi
+KTeX/2.9/pdftex/config/pdftex.map}
 
-{C:/Users/Eros/AppData/Local/MiKTeX/2.9/pdftex/config/pdftex.map}]
+]
 (Fabrici_Morichetti_Demirbilek_Rispoli.toc) [2
 
 ] [3
 
 ]
-<../plots/map_plot.png, id=97, 481.8pt x 481.8pt>
+<../plots/map_plot.png, id=175, 481.8pt x 481.8pt>
 File: ../plots/map_plot.png Graphic file (type png)
 <use ../plots/map_plot.png>
 Package pdftex.def Info: ../plots/map_plot.png  used on input line 33.
-(pdftex.def)             Requested size: 307.29965pt x 227.14442pt.
+(pdftex.def)             Requested size: 307.29965pt x 222.88782pt.
 
-Overfull \vbox (22.59767pt too high) detected at line 33
+Overfull \vbox (22.60071pt too high) detected at line 33
  []
 
 [4
 
  <../plots/map_plot.png (PNG copy)>]
-<../plots/confirmed_facets.png, id=123, 722.7pt x 578.16pt>
+<../plots/confirmed_facets.png, id=216, 722.7pt x 578.16pt>
 File: ../plots/confirmed_facets.png Graphic file (type png)
 <use ../plots/confirmed_facets.png>
-Package pdftex.def Info: ../plots/confirmed_facets.png  used on input line 39.
-(pdftex.def)             Requested size: 307.2923pt x 227.14003pt.
+Package pdftex.def Info: ../plots/confirmed_facets.png  used on input line 42.
+(pdftex.def)             Requested size: 307.2923pt x 170.71451pt.
 
-Overfull \vbox (22.59328pt too high) detected at line 39
+Overfull \vbox (0.8368pt too high) detected at line 42
  []
 
 [5
 
  <../plots/confirmed_facets.png>]
+LaTeX Font Info:    Trying to load font information for U+msa on input line 55.
+
+
+("C:\Users\Eros\AppData\Local\Programs\MiKTeX 2.9\tex/latex/amsfonts\umsa.fd"
+File: umsa.fd 2013/01/14 v3.01 AMS symbols A
+)
+LaTeX Font Info:    Trying to load font information for U+msb on input line 55.
+
+
+("C:\Users\Eros\AppData\Local\Programs\MiKTeX 2.9\tex/latex/amsfonts\umsb.fd"
+File: umsb.fd 2013/01/14 v3.01 AMS symbols B
+)
+LaTeX Font Info:    Trying to load font information for OT1+mathkerncmss on inp
+ut line 55.
+
+("C:\Users\Eros\AppData\Local\Programs\MiKTeX 2.9\tex/latex/sansmathaccent\ot1m
+athkerncmss.fd"
+File: ot1mathkerncmss.fd 2020/01/31 Fontinst v1.933 font definitions for OT1/ma
+thkerncmss.
+) [6
+
+] [7
+
+]
+<../plots/pred/normal/Gujarat_predictions_final.png, id=344, 481.5591pt x 481.5
+591pt>
+File: ../plots/pred/normal/Gujarat_predictions_final.png Graphic file (type png
+)
+<use ../plots/pred/normal/Gujarat_predictions_final.png>
+Package pdftex.def Info: ../plots/pred/normal/Gujarat_predictions_final.png  us
+ed on input line 68.
+(pdftex.def)             Requested size: 307.30031pt x 170.71587pt.
+
+Overfull \vbox (0.83817pt too high) detected at line 68
+ []
+
+[8
+
+ <../plots/pred/normal/Gujarat_predictions_final.png>] [9
+
+]
+<../plots/pred/normal/Maharashtra_predictions_final.png, id=426, 481.5591pt x 4
+81.5591pt>
+File: ../plots/pred/normal/Maharashtra_predictions_final.png Graphic file (type
+ png)
+<use ../plots/pred/normal/Maharashtra_predictions_final.png>
+Package pdftex.def Info: ../plots/pred/normal/Maharashtra_predictions_final.png
+  used on input line 87.
+(pdftex.def)             Requested size: 307.30031pt x 170.71587pt.
+
+Overfull \vbox (0.83817pt too high) detected at line 87
+ []
+
+[10
+
+ <../plots/pred/normal/Maharashtra_predictions_final.png>] [11
+
+]
+<../plots/pred/normal/Madhya Pradesh_predictions_sqrd.png, id=508, 481.5591pt x
+ 481.5591pt>
+File: ../plots/pred/normal/Madhya Pradesh_predictions_sqrd.png Graphic file (ty
+pe png)
+<use ../plots/pred/normal/Madhya Pradesh_predictions_sqrd.png>
+Package pdftex.def Info: ../plots/pred/normal/Madhya Pradesh_predictions_sqrd.p
+ng  used on input line 106.
+(pdftex.def)             Requested size: 307.30031pt x 170.71587pt.
+
+Overfull \vbox (0.83817pt too high) detected at line 106
+ []
+
+[12
+
+ <../plots/pred/normal/Madhya Pradesh_predictions_sqrd.png>] [13
+
+]
+<../plots/pred/normal/Chhattisgarh_predictions_final.png, id=591, 481.5591pt x 
+481.5591pt>
+File: ../plots/pred/normal/Chhattisgarh_predictions_final.png Graphic file (typ
+e png)
+<use ../plots/pred/normal/Chhattisgarh_predictions_final.png>
+Package pdftex.def Info: ../plots/pred/normal/Chhattisgarh_predictions_final.pn
+g  used on input line 125.
+(pdftex.def)             Requested size: 307.30031pt x 170.71587pt.
+
+Overfull \vbox (0.83817pt too high) detected at line 125
+ []
+
+[14
+
+ <../plots/pred/normal/Chhattisgarh_predictions_final.png>] [15
+
+]
+<../plots/pred/normal/Jharkhand_predictions_final.png, id=673, 481.5591pt x 481
+.5591pt>
+File: ../plots/pred/normal/Jharkhand_predictions_final.png Graphic file (type p
+ng)
+<use ../plots/pred/normal/Jharkhand_predictions_final.png>
+Package pdftex.def Info: ../plots/pred/normal/Jharkhand_predictions_final.png  
+used on input line 143.
+(pdftex.def)             Requested size: 307.30031pt x 170.71587pt.
+
+Overfull \vbox (0.83817pt too high) detected at line 143
+ []
+
+[16
+
+ <../plots/pred/normal/Jharkhand_predictions_final.png>] [17
+
+]
+<../plots/pred/normal/Odisha_predictions_final.png, id=755, 481.5591pt x 481.55
+91pt>
+File: ../plots/pred/normal/Odisha_predictions_final.png Graphic file (type png)
+
+<use ../plots/pred/normal/Odisha_predictions_final.png>
+Package pdftex.def Info: ../plots/pred/normal/Odisha_predictions_final.png  use
+d on input line 161.
+(pdftex.def)             Requested size: 307.30031pt x 170.71587pt.
+
+Overfull \vbox (0.83817pt too high) detected at line 161
+ []
+
+[18
+
+ <../plots/pred/normal/Odisha_predictions_final.png>] [19
+
+]
+<../plots/pred/normal/West Bengal_predictions_final.png, id=839, 481.5591pt x 4
+81.5591pt>
+File: ../plots/pred/normal/West Bengal_predictions_final.png Graphic file (type
+ png)
+<use ../plots/pred/normal/West Bengal_predictions_final.png>
+Package pdftex.def Info: ../plots/pred/normal/West Bengal_predictions_final.png
+  used on input line 179.
+(pdftex.def)             Requested size: 307.30031pt x 170.71587pt.
+
+Overfull \vbox (0.83817pt too high) detected at line 179
+ []
+
+[20
+
+ <../plots/pred/normal/West Bengal_predictions_final.png>]
 \tf@nav=\write6
 \openout6 = `Fabrici_Morichetti_Demirbilek_Rispoli.nav'.
 
@@ -982,31 +1124,38 @@ Overfull \vbox (22.59328pt too high) detected at line 39
 \tf@snm=\write8
 \openout8 = `Fabrici_Morichetti_Demirbilek_Rispoli.snm'.
 
-Package atveryend Info: Empty hook `BeforeClearDocument' on input line 40.
-Package atveryend Info: Empty hook `AfterLastShipout' on input line 40.
- (Fabrici_Morichetti_Demirbilek_Rispoli.aux)
-Package atveryend Info: Executing hook `AtVeryEndDocument' on input line 40.
-Package atveryend Info: Executing hook `AtEndAfterFileList' on input line 40.
+Package atveryend Info: Empty hook `BeforeClearDocument' on input line 181.
+Package atveryend Info: Empty hook `AfterLastShipout' on input line 181.
+
+(Fabrici_Morichetti_Demirbilek_Rispoli.aux)
+Package atveryend Info: Executing hook `AtVeryEndDocument' on input line 181.
+Package atveryend Info: Executing hook `AtEndAfterFileList' on input line 181.
 Package rerunfilecheck Info: File `Fabrici_Morichetti_Demirbilek_Rispoli.out' h
 as not changed.
-(rerunfilecheck)             Checksum: D41D8CD98F00B204E9800998ECF8427E;0.
+(rerunfilecheck)             Checksum: 1ED76D02FDC8C57B298ABB7A6324AAF0;63.
  ) 
 Here is how much of TeX's memory you used:
- 17885 strings out of 480759
- 350127 string characters out of 2894647
- 595182 words of memory out of 3000000
- 33474 multiletter control sequences out of 15000+200000
- 534150 words of font info for 30 fonts, out of 3000000 for 9000
+ 18152 strings out of 480759
+ 357224 string characters out of 2894647
+ 607021 words of memory out of 3000000
+ 33681 multiletter control sequences out of 15000+200000
+ 539393 words of font info for 49 fonts, out of 3000000 for 9000
  1141 hyphenation exceptions out of 8191
- 58i,15n,67p,827b,551s stack positions out of 5000i,500n,10000p,200000b,50000s
+ 58i,19n,67p,827b,766s stack positions out of 5000i,500n,10000p,200000b,50000s
 <C:/Users/Eros/AppData/Local/Programs/MiKTeX 2.9/fonts/type1/public/amsfonts/
-cm/cmss10.pfb><C:/Users/Eros/AppData/Local/Programs/MiKTeX 2.9/fonts/type1/publ
-ic/amsfonts/cm/cmss12.pfb><C:/Users/Eros/AppData/Local/Programs/MiKTeX 2.9/font
-s/type1/public/amsfonts/cm/cmss8.pfb>
-Output written on Fabrici_Morichetti_Demirbilek_Rispoli.pdf (5 pages, 175611 by
-tes).
+cm/cmmi10.pfb><C:/Users/Eros/AppData/Local/Programs/MiKTeX 2.9/fonts/type1/publ
+ic/amsfonts/cm/cmss10.pfb><C:/Users/Eros/AppData/Local/Programs/MiKTeX 2.9/font
+s/type1/public/amsfonts/cm/cmss12.pfb><C:/Users/Eros/AppData/Local/Programs/MiK
+TeX 2.9/fonts/type1/public/amsfonts/cm/cmss8.pfb><C:/Users/Eros/AppData/Local/P
+rograms/MiKTeX 2.9/fonts/type1/public/amsfonts/cm/cmssi10.pfb><C:/Users/Eros/Ap
+pData/Local/Programs/MiKTeX 2.9/fonts/type1/public/amsfonts/cm/cmssi8.pfb><C:/U
+sers/Eros/AppData/Local/Programs/MiKTeX 2.9/fonts/type1/public/amsfonts/cm/cmsy
+10.pfb><C:/Users/Eros/AppData/Local/Programs/MiKTeX 2.9/fonts/type1/public/amsf
+onts/cm/cmsy8.pfb>
+Output written on Fabrici_Morichetti_Demirbilek_Rispoli.pdf (20 pages, 587849 b
+ytes).
 PDF statistics:
- 164 PDF objects out of 1000 (max. 8388607)
- 11 named destinations out of 1000 (max. 500000)
- 53 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 920 PDF objects out of 1000 (max. 8388607)
+ 42 named destinations out of 1000 (max. 500000)
+ 96 words of extra memory for PDF output out of 10000 (max. 10000000)
 

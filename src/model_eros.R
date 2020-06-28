@@ -11,14 +11,6 @@ testing_details$Date <- ymd(testing_details$Date)
 #merging testing details and covid_india
 data_merged <- merge(data, testing_details,by = c("Date","State"))
 
-head(data)
-
-# change the column name X to num_day
-
-colnames(data_merged)
-
-str(data_merged)
-
 states <- c("Gujarat","Maharashtra","Madhya Pradesh",
             "Chhattisgarh","Jharkhand","Odisha",
             "West Bengal")
@@ -125,7 +117,6 @@ for (index in 1:7) {
 }
 
 for (index in 1:7) {
-  summary(models[[index]], correlation = TRUE)
   train_ind <- nrow(data_frames[[index]]) - 7 
   train <- data_frames[[index]][seq(1:train_ind), ]
   test <- data_frames[[index]][-seq(1:train_ind), ]
@@ -154,7 +145,35 @@ for (index in 1:7) {
   print(mean((test$Confirmed - predict_sqrd)^2/(nrow(test))))
   print(mad((test$Confirmed - predict_sqrd)/(nrow(test))))
   
+  print("Summary of model")
+  summary(model, corr = TRUE) %>%  print
+  print("Summary of model with squared term")
+  summary(model2, corr = TRUE) %>%  print
+  print("Analysis of variance (F-test)")
   print(anova(model, model2))
 }
 
 
+state <- "Odisha"
+indx <- 6
+filtered <- 
+  data_merged %>% 
+  filter(State == state) %>% 
+  add_daily_and_yesterd_cols
+
+train_ind <- nrow(data_frames[[indx]]) - 7 
+train <- data_frames[[indx]][seq(1:train_ind), ]
+test <- data_frames[[indx]][-seq(1:train_ind), ]
+
+model <- lm(Confirmed ~ 0+yesterday_confirmed+TotalSamples,
+            train
+)
+summary(model)
+predict <- prediction(test, model)
+obs_pred <- c()
+obs_pred <- append(train$Confirmed, predict)
+ggplot(data=filtered, aes(x=num_day, y=Confirmed)) +
+  geom_line(col = 'blue') +
+  geom_line(aes(y = obs_pred), col = 'red') +
+  labs(x = "days", y = "Confirmed", title = state, legend = "Blue = real data; Red: prediction")
+ggsave(paste0("plots/pred/normal/", state, "_predictions_final.png"))

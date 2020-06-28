@@ -32,9 +32,150 @@ India has been chosen for this project, in particular the following regions were
 \end{figure}
 \end{frame}
 
+\section{Forecasting confirmed cases}
+%\subsection{Ciao}
 \begin{frame}
+\frametitle{Forecasting confirmed cases}
 \begin{figure}
-	\includegraphics[width=\linewidth, height=\textheight]{../plots/confirmed_facets.png}
+	\includegraphics[width=\linewidth, height=6cm]{../plots/confirmed_facets.png}
 \end{figure}
 \end{frame}
+
+\begin{frame}
+\frametitle{Models}
+After visualising the data, our initial approach is try to model the confirmed cases with a linear model. 
+
+We identified to possible models:
+\begin{enumerate}
+	\item $ Y_i = \beta_0 + \beta_1*yesterday\_confirmed_i + \beta_2*num\_day_i + \beta_3*swabs_{i-1} + \epsilon_i$
+	\item $ Y_i = \beta_0 + \beta_1*yesterday\_confirmed_i + \beta_2*num\_day_i + \beta_3*swabs_{i-1} + \beta_4*num\_day^2 + \epsilon_i $
+\end{enumerate}
+where $num\_day$ is a counter representing the time.
+Now we proceed and asses the two models for each state.
+\end{frame}
+
+\begin{frame}
+\frametitle{Gujarat}
+Both models have $R^2 = 0.999$ .
+By applying the $F$-test to the models the p-value is very high ($0.92$) therefore we cannot reject $H_0: \beta_4 = 0$, thus the simpler model is preferable. Finally, we observed then that both the $\beta_0$ and $\beta_2$ have a very high p-value with the $t$-test. We can conclude then that the best model for this state in order to obtain short term predictions is $Y_i = \beta_1*yesterday\_confirmed_i+\beta_3*swabs_{i-1}+\epsilon_i$
+\end{frame}
+
+\begin{frame}
+\frametitle{Gujarat prediction}
+\begin{figure}
+	\includegraphics[width=\linewidth, height=6cm]{../plots/pred/normal/Gujarat_predictions_final.png}
+\end{figure}
+\end{frame}
+
+
+
+\begin{frame}
+\frametitle{Maharashtra}
+\begin{itemize}
+	\item Same $R^2 = 0.999$ for both models
+	\item $F$-test: p-value = $0.61$  we cannot reject $H_0$, e.g. we keep the simpler model
+	\item $t$-test on the simpler model showed that only $\beta_1$ and $\beta_3$ have a significant p-value ($p\leq 0.05$, therefore we can get rid of the remaining covariates.
+	\item Final model: $Y_i = \beta_1*yesterday\_confirmed_i+\beta_3*swabs_{i-1}$
+\end{itemize}
+\end{frame}
+
+\begin{frame}
+\frametitle{Maharashtra prediction}
+\begin{figure}
+	\includegraphics[width=\linewidth, height=6cm]{../plots/pred/normal/Maharashtra_predictions_final.png}
+\end{figure}
+\end{frame}
+
+
+\begin{frame}
+\frametitle{Madhya Pradesh}
+\begin{itemize}
+	\item Same $R^2 = 0.997$ for both models
+	\item $F$-test: p-value = $0.09$ we reject $H_0$, e.g. we keep the more sophisticated model
+	\item $t$-test on the selected model showed that all covariates are significant ($p \leq 0.05$) except for the $num\_day^2$ which has a p-value$=0.09$, but has we decided to keep after the $F$-test we continue to maintain it in the model
+	\item Final model: $Y_i = \beta_0 + \beta_1*yesterday\_confirmed_i + \beta_2*num\_day_i + \beta_3*swabs_{i-1} + \beta_4*num\_day^2 + \epsilon_i $
+	
+\end{itemize}
+\end{frame}
+
+\begin{frame}
+\frametitle{Madhya Pradesh prediction}
+\begin{figure}
+	\includegraphics[width=\linewidth, height=6cm]{../plots/pred/normal/Madhya Pradesh_predictions_sqrd.png}
+\end{figure}
+\end{frame}
+
+
+\begin{frame}
+\frametitle{Chhattisgarh}
+\begin{itemize}
+	\item $R^2 = 0.9972$ for the first model and $R^2 = 0.9974$ for the second model. 
+	\item $F$-test: p-value = $0.005$ we reject $H_0$, e.g. we keep the more sophisticated model.
+	\item $t$-test on the selected model showed that $\beta_0$'s p-value is $0.92$ and $\beta_2$'s p-value is equal to $0.25$, while for the remaining ones the p-values are very significant.
+	\item Final model: $Y_i = \beta_1*yesterday\_confirmed_i + \beta_3*swabs_{i-1} + \beta_4*num\_day^2 + \epsilon_i $
+	
+\end{itemize}
+\end{frame}
+
+\begin{frame}
+\frametitle{Chhattisgarh prediction}
+\begin{figure}
+	\includegraphics[width=\linewidth, height=6cm]{../plots/pred/normal/Chhattisgarh_predictions_final.png}
+\end{figure}
+\end{frame}
+
+\begin{frame}
+\frametitle{Jharkhand}
+\begin{itemize}
+	\item $R^2 = 0.997$ for the first model and $R^2 = 0.998$ for the second model. 
+	\item $F$-test: p-value = $0.001$; we reject $H_0$, e.g. we keep the more sophisticated model.
+	\item $t$-test on the selected model showed that $\beta_0$'s p-value is $0.28$, while for the remaining coefficients the p-values are $\leq 0.05$, therefore we can remove $\beta_0$.
+	\item Final model: $Y_i = \beta_1*yesterday\_confirmed_i + \beta_2*num\_day_i + \beta_3*swabs_{i-1} + \beta_4*num\_day^2 + \epsilon_i $
+	
+\end{itemize}
+\end{frame}
+
+\begin{frame}
+\frametitle{Jharkhand prediction}
+\begin{figure}
+	\includegraphics[width=\linewidth, height=6cm]{../plots/pred/normal/Jharkhand_predictions_final.png}
+\end{figure}
+\end{frame}
+
+
+\begin{frame}
+\frametitle{Odisha}
+\begin{itemize}
+	\item $R^2 = 0.997$ for both models.
+	\item $F$-test: p-value = $0.51$; we cannot reject $H_0$, e.g. we keep the simpler model.
+	\item $t$-test on the selected model's coefficients showed that $\beta_0$'s p-value is $0.32$ and $\beta_2$'s p-value$=0.115$, while for the remaining coefficients the p-values are $\leq 0.05$, therefore we can remove $\beta_0$ and $\beta_2*num\_day$.
+	\item Final model: $Y_i = \beta_1*yesterday\_confirmed_i + \beta_3*swabs_{i-1} + \epsilon_i $
+\end{itemize}
+\end{frame}
+
+\begin{frame}
+\frametitle{Odisha prediction}
+\begin{figure}
+	\includegraphics[width=\linewidth, height=6cm]{../plots/pred/normal/Odisha_predictions_final.png}
+\end{figure}
+\end{frame}
+
+
+\begin{frame}
+\frametitle{West Bengal}
+\begin{itemize}
+	\item $R^2 = 0.9998$ for both models.
+	\item $F$-test: p-value = $0.67$; we cannot reject $H_0$, e.g. we keep the simpler model.
+	\item $t$-test on the selected model's coefficients showed that $\beta_0$'s p-value is $0.88$ and $\beta_2$'s p-value$=0.09$, while for the remaining coefficients the p-values are $\leq 0.05$, therefore we can remove $\beta_0$ and $\beta_2*num\_day$.
+	\item Final model: $Y_i = \beta_1*yesterday\_confirmed_i + \beta_3*swabs_{i-1} + \epsilon_i $
+\end{itemize}
+\end{frame}
+
+\begin{frame}
+\frametitle{West Bengal prediction}
+\begin{figure}
+	\includegraphics[width=\linewidth, height=6cm]{../plots/pred/normal/West Bengal_predictions_final.png}
+\end{figure}
+\end{frame}
+
 \end{document}
