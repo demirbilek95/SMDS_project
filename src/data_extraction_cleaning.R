@@ -104,6 +104,7 @@ pop_census<- pop_census %>%
   extract(Area, "Area", "(\\d+,\\d+).*", convert= TRUE) %>%
   extract(Density, "Density", "(.+)/k.*", convert= TRUE) 
 
+# translate strings into numbers eg "12,345" -> num 12345
 strcommaToNum <- function(s){
   return(as.numeric(gsub(",","",s)))
 }  
