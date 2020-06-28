@@ -154,8 +154,8 @@ for (index in 1:7) {
 }
 
 
-state <- "Odisha"
-indx <- 6
+state <- "West Bengal"
+indx <- 7
 filtered <- 
   data_merged %>% 
   filter(State == state) %>% 
