@@ -146,15 +146,15 @@ pred <- make_prediction(model2)
 # just plotting test set and predictions together
 
 plot(df$daily)
-lines(c(model1$fitted.values,pred),col="red")
+lines(c(model2$fitted.values,pred),col="red")
 
-obs_pred <- append(model1$fitted.values,pred)
+obs_pred <- append(model2$fitted.values,pred)
 ggplot(data=df,aes(x=num_day,y=daily)) + geom_line(col='blue') + geom_line(aes(y=obs_pred),col='red')
 
 mse_mad <- function(df,pred) {
   # MSE and MAD check
-  mse <- mean((df$daily - pred)^2/(nrow(df)))
-  mad <- mad((df$daily - pred)/(nrow(df)))
+  mse <- sum((df$daily - pred)^2)/(nrow(df))
+  mad <- sum(abs(df$daily - pred))/(nrow(df))
   cat("MSE:", mse)
   cat("\nMAD", mad)
 }
@@ -170,3 +170,20 @@ mse_mad(test, pred)
 # I am not sure if model like this can be generalized for all states need to check.options
 # I hope there is no overfitting but model worked more or less okay for test data, just prediction problem that we have about
 # covariates that we don't have need to be solved
+
+states <- c("Gujarat","Maharashtra","Madhya Pradesh",
+            "Chhattisgarh","Jharkhand","Odisha",
+            "West Bengal")
+
+for (i in states) {
+  print(i)
+  df <- add_daily(i)
+  png(paste("plots/daily_",i,".png",sep=''))
+  plot(df$num_day,df$daily)
+  dev.off()
+}
+
+# Try to try very same model for all states and check the results
+# study bit theory about lm and glm
+# maybe plot
+# presentation
