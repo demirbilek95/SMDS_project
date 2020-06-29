@@ -66,9 +66,6 @@ ggplot(td)+
   facet_wrap(vars(State),scales="free_y")
 ggsave("plots/tests_problems2_facets.png", width = 10, height=8 )
 
-badtd %>% select(Date,State,NewSamples)
-
-
 #and in some cases neither do confirmed cases! (hard to spot)
 ggplot(cd)+
   geom_line(aes(Date, NewCases),size=1) +
@@ -78,9 +75,6 @@ ggplot(cd)+
   labs(title="Daily novel confirmed cases", subtitle = "(dirty datapoints in red)", y="Confirmed cases", x="")+
   facet_wrap(vars(State),scales="free_y")
 ggsave("plots/newcases_facets.png", width = 10, height=8 )
-
-cd[cd$NewCases<0,] %>% select(Date,State,NewCases)
-
 
 # new cases and new samples rescaled
 tdcd <- full_join(cd,td, by= c("State", "Date"))
