@@ -67,6 +67,9 @@ name_state <- function(x,y,z,subscripts,...){
 
 png("plots/map_plot.png")
 
+spplot(ind1, "Confirmed", col.regions = my.palette, 
+       cuts = 6, colorkey=T, scales=list(draw=T))
+
 spplot(ind1, "Confirmed", col.regions = my.palette, cuts = 6,
        panel = name_state, colorkey=T, scales=list(draw=T))
 
