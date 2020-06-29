@@ -11,10 +11,12 @@ complete <- full_join(covid19,testing, by= c("State", "Date")) %>%
   arrange(State, Date) %>% 
   group_by(State) %>%
   transmute(Date= as.Date(Date),
-            Confirmed, lag_Conf = lag(Confirmed, default=0),
-            NewConf = Confirmed - lag(Confirmed, default=0),
-            Infected = Confirmed - Deaths - Cured, lag_Inf = lag(Infected, default = 0),
-            Susceptible = Population - Confirmed, lag_Sus = lag(Susceptible),
+            Confirmed, dConf = Confirmed - lag(Confirmed, default=0),
+            Deaths, Population,
+            Removed = Deaths + Cured, dRem = Removed - lag(Removed,default=0),
+            Infected = Confirmed - Removed, dInf = Infected-lag(Infected, default = 0),
+            Susceptible = Population - Confirmed, dSus = Susceptible - lag(Susceptible))
+
             SusRatio = (Population - Confirmed)/Population, lag_SusRatio = lag(SusRatio),
             TotalSamples,
             NewSamples = TotalSamples - lag(TotalSamples, default = 0),
@@ -27,13 +29,33 @@ complete <- full_join(covid19,testing, by= c("State", "Date")) %>%
 
 complete %>% ggplot() +
   #geom_line(aes(Confirmed,lag_Conf))+
-  geom_line(aes(Date, NewConf),color="red") +
-  geom_line(aes(Date, NewSamples),color="blue") +
+  geom_line(aes(Date, Infected),color="red") +
+  geom_line(aes(Date, Removed),color="green") +
+  #geom_line(aes(Date, Susceptible),color="yellow") +
   #geom_line(aes(Date, NewPositive),color="blue") +
   #geom_point(aes(Date, Negative), color="green") +
   #geom_point(aes(Date, Positive+Negative), color="blue") +
   #geom_point(aes(Date, TotalSamples), color="cyan") +
   #geom_point(aes(Date, Infected), color="red") +
+  facet_wrap(vars(State), scales = "free_y")
+
+
+complete %>% group_by(State) %>% mutate(ILag = lag(dConf,16,0)) %>% 
+  ggplot() +
+  geom_point(aes(ILag, dRem))+
+  facet_wrap(vars(State), scales = "free")
+  
+complete %>% #group_by(State) %>% mutate(Confirmed = lag(Confirmed,15,0)) %>%
+  ggplot(aes(x=Date)) +
+  geom_line(aes(y=Removed), color="green")+ 
+  geom_line(aes(y=Confirmed),color="red")+
+  facet_wrap(vars(State), scales = "free_y")
+
+complete %>% group_by(State) %>% mutate(Confirmed = lag(Confirmed,14,0)) %>%
+  ggplot() +
+  geom_line(aes(x=Confirmed, y=Removed))+ 
+  #geom_line(aes(x=Confirmed, y=Deaths/Population), color="red") +
+  #geom_line(aes(y=Confirmed),color="red")+
   facet_wrap(vars(State), scales = "free")
 
 states <- levels(complete$State)
