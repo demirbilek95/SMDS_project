@@ -18,7 +18,7 @@ covid_19 %>%
 
 #Interesting note: Cured+Deaths lags behind confirmed of about 14 days
 
-ggsave("plots/confirmed+death+cured_facets.png", width = 10, height=8 )
+ggsave("plots/confirmed+death+cured_facets.png", width = 150, height=120,units="mm" )
 
 #plot testing data facets
 testing_details <- read.csv("data/testing_filtered_filled.csv") %>% mutate(Date=as.Date(Date))
@@ -31,7 +31,7 @@ testing_details %>%
   theme(legend.position = "bottom")+
   labs(title="Total/Positive/Negative cumulative swabs count per Region", y="Samples", x="")+
   facet_wrap(vars(State), scales="free_y")
-ggsave("plots/tests_full_facets.png", width = 10, height=8 )
+ggsave("plots/tests_full_facets.png", width = 150, height=120,units="mm" )
 
 #Notes:
 # 1.Lots of missing data for positive/negative swabs.
@@ -44,7 +44,7 @@ testing_details %>% transmute(Date,State,diff=TotalSamples-Positive-Negative) %>
   geom_line(aes(Date,diff), size=1)+
   labs(title="Swabs data is inconsistent!", y="Total Samples - (Positive+Negative)", x="")+
   facet_wrap(vars(State), scales="free_y")
-ggsave("plots/tests_problems1_facets.png", width = 10, height=8 )
+ggsave("plots/tests_problems1_facets.png", width = 150, height=120,units="mm" )
 
 #new cases and new samples
 td <- testing_details %>%
@@ -64,7 +64,7 @@ ggplot(td)+
             size=3, fontface="bold", hjust=1, nudge_x = -2, color="red")+
   labs(title="Daily swabs count",subtitle = "(dirty datapoints in red)", y="Daily samples", x="")+
   facet_wrap(vars(State),scales="free_y")
-ggsave("plots/tests_problems2_facets.png", width = 10, height=8 )
+ggsave("plots/tests_problems2_facets.png", width = 150, height=120,units="mm" )
 
 #and in some cases neither do confirmed cases! (hard to spot)
 ggplot(cd)+
@@ -74,13 +74,15 @@ ggplot(cd)+
             size=3, fontface="bold", color="red")+
   labs(title="Daily novel confirmed cases", subtitle = "(dirty datapoints in red)", y="Confirmed cases", x="")+
   facet_wrap(vars(State),scales="free_y")
-ggsave("plots/newcases_facets.png", width = 10, height=8 )
+ggsave("plots/newcases_facets.png", width = 150, height=120,units="mm" )
 
 # new cases and new samples rescaled
-tdcd <- full_join(cd,td, by= c("State", "Date"))
-tdcd <- tdcd %>% group_by(State) %>%
-  mutate(nNewCases = pmax(NewCases,0) / max(NewCases, na.rm = TRUE),
+tdcd <- full_join(cd,td, by= c("State", "Date")) %>% arrange(State,Date) %>% 
+  group_by(State) %>%
+  mutate(Removed = Deaths + Cured,
+         nNewCases = pmax(NewCases,0) / max(NewCases, na.rm = TRUE),
          nNewSamples = pmax(NewSamples,0) / max(NewSamples, na.rm = TRUE))
+
 ggplot(tdcd)+
   geom_line(aes(Date, nNewSamples,color="Daily Swabs"), ) +
   geom_line(aes(Date, nNewCases, color="Daily Confirmed")) +
@@ -88,7 +90,35 @@ ggplot(tdcd)+
   scale_color_manual(name="",values=c("Daily Swabs"="blue", "Daily Confirmed"="red"))+
   theme(legend.position = "bottom")+
   facet_wrap(vars(State),scales="free_y")+
-ggsave("plots/newsamps+newcases_scaled_facets.png", width = 10, height=8 )
+ggsave("plots/newsamps+newcases_scaled_facets.png", width = 150, height=120,units="mm" )
+
+
+
+# tests-------------
+ggplot(tdcd)+
+  geom_line(aes(Date, Removed,color="Removed"), ) +
+  geom_line(aes(Date, Confirmed, color="Confirmed")) +
+  labs(title="Samples and Confirmed", y="Daily Cumulative", x="")+
+  scale_color_manual(name="",values=c("Removed"="blue", "Confirmed"="red"))+
+  theme(legend.position = "bottom")+
+  facet_wrap(vars(State),scales="free_y")
+
+library(stats)
+
+a=sin(seq(0,10,.1))
+b=sin(seq(1,11,.1))
+ccf(a,b)
+for(ss in states){
+  testdf = tdcd[tdcd$State==ss,]
+  testdf = testdf[!is.na(testdf$nNewSamples),]
+  corrs = ccf(testdf$NewCases, testdf$NewSamples,lag.max = 30)
+  print(paste(ss,":", 
+              which.max( corrs$acf) - 31))
+}
+#-------
+
+testdf = tdcd[tdcd$State==states[2],]
+modl = glm(NewCases~State + NewSamples:State, data=tdcd)
 
 #population and density
 census <- read.csv("data/pop_census_filtered.csv")
@@ -98,11 +128,17 @@ census %>% select(State, Rural.population, Urban.population, Density) %>%
   ggplot()+
   geom_bar(aes(State,Val, fill=Stat, alpha = Density), stat="identity", position = "dodge",color="black") +
   scale_fill_hue( labels=c("Rural","Urban"))+
+  scale_alpha(guide="none")+
   geom_text(aes(State, labpos, label=paste(Density,"~pop/m^2"), group=State), parse=TRUE, size=2.5, position = position_dodge(0.9), vjust=-.25)+
-  theme(axis.text.x = element_text(angle=45, hjust = 1)) +
-  labs(title="Population subdivision and density by state", x="",y="Population", fill="Type", alpha = expression(paste("Density (",pop/m^2,")")))
-ggsave("plots/pop+density_hist.png", width = 10, height=8 )
+  theme(axis.text.x = element_text(angle=45, hjust = 1),
+        legend.key.size = unit(.5,"cm"),
+        legend.justification = a,
+        legend.title = element_text(size=10),
+        legend.text = element_text(size=10),
+        legend.position = c(.01,.75)) +
+  labs(x="",y="Population", fill="Type", alpha = expression(paste("Density (",pop/m^2,")")))
+ggsave("plots/pop+density_hist.png", width = 150, height=120,units="mm" )
 
 census %>% ggplot(aes(State,Density)) +
   geom_bar(stat="identity")
-ggsave("plots/density_hist.png", width = 10, height=8 )
+ggsave("plots/density_hist.png", width = 150, height=120,units="mm" )
