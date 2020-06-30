@@ -26,11 +26,11 @@ complete <- full_join(covid19,testing, by= c("State", "Date")) %>%
 
 
 #SIR plot... meh
-complete %>% ggplot() +
+#complete %>% ggplot() +
   #geom_line(aes(Confirmed,lag_Conf))+
-  geom_line(aes(Date, Infected/Population),color="red") +
-  geom_line(aes(Date, Removed/Population),color="green") +
-  geom_line(aes(Date, Susceptible/Population),color="yellow") +
+  #geom_line(aes(Date, Infected/Population),color="red") +
+  #geom_line(aes(Date, Removed/Population),color="green") +
+  #geom_line(aes(Date, Susceptible/Population),color="yellow") +
   #geom_line(aes(Date, NewPositive),color="blue") +
   
   #geom_line(aes(Date, TotalSamples), color="cyan") +
@@ -38,7 +38,7 @@ complete %>% ggplot() +
   #geom_line(aes(Date, Positive), color="blue") +
   
   #geom_point(aes(Date, Infected), color="red") +
-  facet_wrap(vars(State), scales = "free_y")
+  #facet_wrap(vars(State), scales = "free_y")
 
 
 #ACF of daily confirmed
@@ -82,7 +82,8 @@ for(s in levels(complete$State)){
     ggplot()+
     geom_hline(yintercept = 0, linetype="dashed",color="grey")+
     geom_point(aes(Pred,dConf-Pred, color=Training))+
-    labs(title=s)+
+    scale_color_manual(values=c("#ff0000","#000000"))+
+    labs(title=s,x="Pred",y="Residuals")+
     #labs(title = sprintf("TrainMSE: %.3f Test_MSE: %.3f", train_MSE, test_MSE))+
     guides(color=FALSE)
   
@@ -90,13 +91,14 @@ for(s in levels(complete$State)){
   predplots[[s]] <- comp2 %>% mutate(Training = Day<=last_train) %>%
     ggplot()+
     geom_point(aes(Date,dConf,color=Training))+
-    geom_line(aes(Date,Pred,color=Training))+
-    labs(title=s)+
+    geom_line(aes(Date,Pred), color="#3366ff",size=1)+
+    scale_color_manual(values=c("#ff0000","#000000"))+
+    labs(title=s,x="",y="Daily Confirmed")+
     guides(color=FALSE)
   
 }
-multiplot(plotlist=resplots, cols=3)
-multiplot(plotlist=predplots, cols=3)
+#multiplot(plotlist=resplots, cols=3)
+#multiplot(plotlist=predplots, cols=3)
 
 
 summaries2 = list()
@@ -126,7 +128,8 @@ for(s in levels(complete$State)){
     ggplot()+
     geom_hline(yintercept = 0, linetype="dashed",color="grey")+
     geom_point(aes(Pred,dConf-Pred, color=Training))+
-    labs(title=s)+
+    scale_color_manual(values=c("#ff0000","#000000"))+
+    labs(title=s,x="Pred",y="Residuals")+
     #labs(title = sprintf("TrainMSE: %.3f Test_MSE: %.3f", train_MSE, test_MSE))+
     guides(color=FALSE)
   
@@ -134,13 +137,18 @@ for(s in levels(complete$State)){
   predplots2[[s]] <- comp2 %>% mutate(Training = Day<=last_train) %>%
     ggplot()+
     geom_point(aes(Date,dConf,color=Training))+
-    geom_line(aes(Date,Pred,color=Training))+
-    labs(title=s)+
+    geom_line(aes(Date,Pred), color="#3366ff",size=1)+
+    scale_color_manual(values=c("#ff0000","#000000"))+
+    labs(title=s,x="",y="Daily Confirmed")+
     guides(color=FALSE)
   
 }
-multiplot(plotlist=resplots2, cols=3)
-multiplot(plotlist=predplots2, cols=3)
+#multiplot(plotlist=resplots2, cols=3)
+#multiplot(plotlist=predplots2, cols=3)
+
+#no save... go manual (ie zoom the viewport, resize window and copy the image)
+multiplot(plotlist=c(resplots2[1:3],resplots[4:6],resplots2[7]), cols=3)
+multiplot(plotlist=c(predplots2[1:3],predplots[4:6],predplots2[7]), cols=3)
 
 devs=c()
 for(s in names(summaries)){
@@ -154,6 +162,8 @@ for(s in names(summaries)){
   pvals=cbind(pvals,s=c(summaries[[s]]$coefficients[,4],summaries2[[s]]$coefficients[,4]))
 }
 names(summaries)
+
+
 
 summaries[[1]]
 summaries2[[1]]
