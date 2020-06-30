@@ -1,10 +1,11 @@
 library(dplyr)
 library(ggplot2)
 
-covid19 <- read.csv("data/covid_19_india_filtered.csv")
-testing <- read.csv("data/testing_filtered_filled.csv")
+covid19 <- read.csv("data/covid_19_india_filtered.csv") %>% mutate(Date=as.Date(Date))
+testing <- read.csv("data/testing_filtered_filled.csv") %>% mutate(Date=as.Date(Date))
 census <- read.csv("data/pop_census_filtered.csv")
 
+nadefault <- function(x,y) ifelse(is.na(x),y,x)
 
 complete <- full_join(covid19,testing, by= c("State", "Date")) %>%
   full_join(census,by="State") %>% 
@@ -12,83 +13,152 @@ complete <- full_join(covid19,testing, by= c("State", "Date")) %>%
   group_by(State) %>%
   transmute(Date= as.Date(Date),
             Confirmed, dConf = Confirmed - lag(Confirmed, default=0),
-            Deaths, Population,
+            Deaths, Cured, Population, Density,
+            
             Removed = Deaths + Cured, dRem = Removed - lag(Removed,default=0),
             Infected = Confirmed - Removed, dInf = Infected-lag(Infected, default = 0),
-            Susceptible = Population - Confirmed, dSus = Susceptible - lag(Susceptible))
+            Susceptible = Population - Confirmed, dSus = nadefault(Susceptible - lag(Susceptible),0),
 
-            SusRatio = (Population - Confirmed)/Population, lag_SusRatio = lag(SusRatio),
-            TotalSamples,
-            NewSamples = TotalSamples - lag(TotalSamples, default = 0),
-            NewSampRatio = NewSamples/Susceptible, lag_NewSampRatio = lag(NewSampRatio, default = 0),
-            Positive, NewPositive = Positive - lag(Positive, default=0), Negative) %>% 
-  rowwise() %>% 
-  mutate(NewSamples = max(NewSamples,0),
-         NewSampRatio = max(NewSampRatio,0),
-         lag_NewSampRatio = max(lag_NewSampRatio,0))
+            TotalSamples = nadefault(TotalSamples,nadefault(lag(TotalSamples),0)), dSamp = TotalSamples - lag(TotalSamples, default = 0),
+            Positive = Positive, dPos = Positive - lag(Positive, default=0),
+            Negative = Negative, dNeg = Negative - lag(Negative, default=0)) %>% 
+  mutate(dConf = pmax(dConf,0), dSamp=pmax(dSamp,0),dSus = pmin(dSus,0))
 
+
+#SIR plot... meh
 complete %>% ggplot() +
   #geom_line(aes(Confirmed,lag_Conf))+
-  geom_line(aes(Date, Infected),color="red") +
-  geom_line(aes(Date, Removed),color="green") +
-  #geom_line(aes(Date, Susceptible),color="yellow") +
+  geom_line(aes(Date, Infected/Population),color="red") +
+  geom_line(aes(Date, Removed/Population),color="green") +
+  geom_line(aes(Date, Susceptible/Population),color="yellow") +
   #geom_line(aes(Date, NewPositive),color="blue") +
-  #geom_point(aes(Date, Negative), color="green") +
-  #geom_point(aes(Date, Positive+Negative), color="blue") +
-  #geom_point(aes(Date, TotalSamples), color="cyan") +
-  #geom_point(aes(Date, Infected), color="red") +
-  facet_wrap(vars(State), scales = "free_y")
-
-
-complete %>% group_by(State) %>% mutate(ILag = lag(dConf,16,0)) %>% 
-  ggplot() +
-  geom_point(aes(ILag, dRem))+
-  facet_wrap(vars(State), scales = "free")
   
-complete %>% #group_by(State) %>% mutate(Confirmed = lag(Confirmed,15,0)) %>%
-  ggplot(aes(x=Date)) +
-  geom_line(aes(y=Removed), color="green")+ 
-  geom_line(aes(y=Confirmed),color="red")+
+  #geom_line(aes(Date, TotalSamples), color="cyan") +
+  #geom_line(aes(Date, Negative), color="green") +
+  #geom_line(aes(Date, Positive), color="blue") +
+  
+  #geom_point(aes(Date, Infected), color="red") +
   facet_wrap(vars(State), scales = "free_y")
 
-complete %>% group_by(State) %>% mutate(Confirmed = lag(Confirmed,14,0)) %>%
-  ggplot() +
-  geom_line(aes(x=Confirmed, y=Removed))+ 
-  #geom_line(aes(x=Confirmed, y=Deaths/Population), color="red") +
-  #geom_line(aes(y=Confirmed),color="red")+
-  facet_wrap(vars(State), scales = "free")
 
-states <- levels(complete$State)
+#ACF of daily confirmed
+plt.acfs <- function() {
+  par(mfrow=c(3,3))
+  for(s in levels(complete$State)){
+    acf((complete %>% filter(State==s))$dConf)
+  }
+  par(mfrow=c(1,1))
+}
 
-comp2 <- complete %>% filter(State == states[3]) %>% 
-  mutate()
-
-comp2$lag_Sus[1] = comp2$lag_Sus[2]
-comp2$lag_SusRatio[1] = comp2$lag_SusRatio[2]
-
-comp2 <- comp2 %>% mutate(lags =  lag_Inf * lag_NewSampRatio * lag_SusRatio)
-
-comp2 %>% ggplot() +
-  geom_line(aes(Confirmed,lag_Conf))
-  #geom_line(aes(Date, NewConf),color="red") +
-  #geom_line(aes(Date, NewPositive),color="blue") +
-  #geom_point(aes(Date, Negative), color="green") +
-  #geom_point(aes(Date, Positive+Negative), color="blue") +
-  #geom_point(aes(Date, TotalSamples), color="cyan") +
-  #geom_point(aes(Date, Infected), color="red") +
+plt.acfs()
 
 
+#daily models
 
-comp2$t = 1:nrow(comp2)
-#idx <- floor(nrow(comp2)*.8)
-train <- comp2[1: (nrow(comp2)-7),]
-test <- comp2[(nrow(comp2)-6):nrow(comp2),]
+summaries = list()
+anovas = list()
+modls = list()
+resplots = list()
+predplots = list()
+for(s in levels(complete$State)){
+  comp2 <- complete %>% filter(State == s) %>% mutate(Day = as.numeric(Date- min(Date)))
+  last_train = (nrow(comp2)-7)
+  
+  modl <- glm(dConf ~ Day + lag(Confirmed, default=0),
+                data=comp2[1:last_train,],
+                family = quasipoisson)
+  modls[[s]] <- modl
+  summaries[[s]] <- summary(modl)
+  anovas[[s]]<- anova(modl)
+  
+  comp2 <- comp2 %>% cbind(Pred=predict(modl,newdata=comp2,type = "response"))
+  
+  SqE = (comp2$dConf - comp2$Pred)^2
+  train_MSE = mean(SqE[1:last_train])
+  test_MSE = mean(SqE[(last_train+1):length(SqE)])
+  
+  #residual plots
+  resplots[[s]] <- comp2 %>% mutate(Training = Day<=last_train) %>%
+    ggplot()+
+    geom_hline(yintercept = 0, linetype="dashed",color="grey")+
+    geom_point(aes(Pred,dConf-Pred, color=Training))+
+    labs(title=s)+
+    #labs(title = sprintf("TrainMSE: %.3f Test_MSE: %.3f", train_MSE, test_MSE))+
+    guides(color=FALSE)
+  
+  #preds plot
+  predplots[[s]] <- comp2 %>% mutate(Training = Day<=last_train) %>%
+    ggplot()+
+    geom_point(aes(Date,dConf,color=Training))+
+    geom_line(aes(Date,Pred,color=Training))+
+    labs(title=s)+
+    guides(color=FALSE)
+  
+}
+multiplot(plotlist=resplots, cols=3)
+multiplot(plotlist=predplots, cols=3)
 
-sirmodel <- glm(NewConf ~ -1 + NewSamples, data=comp2, family = poisson)
-summary(sirmodel)
 
+summaries2 = list()
+anovas2 = list()
+modls2 = list()
+resplots2 = list()
+predplots2 = list()
+for(s in levels(complete$State)){
+  comp2 <- complete %>% filter(State == s) %>% mutate(Day = as.numeric(Date- min(Date)))
+  last_train = (nrow(comp2)-7)
+  
+  modl <- glm(dConf ~ Day + I(Day^2) + lag(Confirmed, default=0) + lag(TotalSamples,default=0),
+              data=comp2[1:last_train,],
+              family = quasipoisson)
+  modls2[[s]] <- modl
+  summaries2[[s]] <- summary(modl)
+  anovas2[[s]]<- anova(modl)
+  
+  comp2 <- comp2 %>% cbind(Pred=predict(modl,newdata=comp2,type = "response"))
+  
+  SqE = (comp2$dConf - comp2$Pred)^2
+  train_MSE = mean(SqE[1:last_train])
+  test_MSE = mean(SqE[(last_train+1):length(SqE)])
+  
+  #residual plots
+  resplots2[[s]] <- comp2 %>% mutate(Training = Day<=last_train) %>%
+    ggplot()+
+    geom_hline(yintercept = 0, linetype="dashed",color="grey")+
+    geom_point(aes(Pred,dConf-Pred, color=Training))+
+    labs(title=s)+
+    #labs(title = sprintf("TrainMSE: %.3f Test_MSE: %.3f", train_MSE, test_MSE))+
+    guides(color=FALSE)
+  
+  #preds plot
+  predplots2[[s]] <- comp2 %>% mutate(Training = Day<=last_train) %>%
+    ggplot()+
+    geom_point(aes(Date,dConf,color=Training))+
+    geom_line(aes(Date,Pred,color=Training))+
+    labs(title=s)+
+    guides(color=FALSE)
+  
+}
+multiplot(plotlist=resplots2, cols=3)
+multiplot(plotlist=predplots2, cols=3)
 
-predict(sirmodel)
+devs=c()
+for(s in names(summaries)){
+  print(s)
+  print(c(summaries[[s]]$deviance,summaries2[[s]]$deviance ))
+}
 
-plot(comp2$Date,comp2$Confirmed)
-lines(comp2$Date,predict(sirmodel,newdata = comp2),col="red")
+pvals=c()
+for(s in names(summaries)){
+  print(s)
+  pvals=cbind(pvals,s=c(summaries[[s]]$coefficients[,4],summaries2[[s]]$coefficients[,4]))
+}
+names(summaries)
+
+summaries[[1]]
+summaries2[[1]]
+
+for(s in names(summaries)){
+  print(s)
+  print(anova(modls[[s]],modls2[[s]],test = "F"))
+}

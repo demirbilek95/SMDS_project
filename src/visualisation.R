@@ -105,21 +105,41 @@ ggplot(tdcd)+
 
 library(stats)
 
-a=sin(seq(0,10,.1))
-b=sin(seq(1,11,.1))
-ccf(a,b)
+lags_nCases.nSamples= c()
 for(ss in states){
   testdf = tdcd[tdcd$State==ss,]
   testdf = testdf[!is.na(testdf$nNewSamples),]
   corrs = ccf(testdf$NewCases, testdf$NewSamples,lag.max = 30)
-  print(paste(ss,":", 
-              which.max( corrs$acf) - 31))
+  lags_nCases.nSamples <- lags_nCases.nSamples %>% 
+    rbind(data.frame(State=ss,lagnCases=corrs$lag,ACF=corrs$acf))
 }
+
+lags_nCases.nSamples %>% ggplot()+
+  geom_line(aes(lagnCases,ACF,color=State,alpha=ACF),size=1)+
+  scale_alpha_continuous( guide="none")
+
+
 #-------
 
-testdf = tdcd[tdcd$State==states[2],]
-modl = glm(NewCases~State + NewSamples:State, data=tdcd)
-
+testdf = tdcd[tdcd$State==states[6],] %>% mutate(NewCases = pmax(NewCases,0))
+testdf$State[1]
+modl = glm(NewCases~ Date +
+             lag(NewSamples,6,default = 0)+
+             lag(NewSamples,5,default = 0)+
+             lag(NewSamples,4,default = 0)+
+             lag(NewSamples,3,default = 0)+
+             lag(NewSamples,2,default = 0)+
+             lag(NewSamples,1,default = 0)+
+             lag(NewCases,default = 0),
+           data=testdf,
+           family=poisson)
+summary(modl)
+testdf %>% cbind(pred=modl$fitted.values) %>%
+  ggplot()+
+  geom_line(aes(Date,nNewSamples*max(NewCases)),color="green",alpha=.4)+
+  geom_point(aes(Date,NewCases))+
+  geom_line(aes(Date,pred),color="red")
+  
 #population and density
 census <- read.csv("data/pop_census_filtered.csv")
 census %>% select(State, Rural.population, Urban.population, Density) %>%
