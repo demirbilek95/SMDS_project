@@ -15,26 +15,8 @@ str(testing_details)
 data_merged <- merge(data, testing_details,by = c("Date","State"))
 
 head(data)
-
 colnames(data_merged)
-
 str(data_merged)
-
-# This part can be useful later to bring covariates to same scale
-# normalize <- function(x) {
-#   return ((x - min(x)) / (max(x) - min(x)))
-# }
-# 
-# data$Population <- normalize(data$Population)
-# data$Rural.population <- normalize(data$Rural.population)
-# data$TotalPublicHealthFacilities_HMIS <- normalize(data$TotalPublicHealthFacilities_HMIS)
-# data$Urban.population <- normalize(data$Urban.population)
-# data$num_lab <- normalize(data$num_lab)
-
-# It is the function that prepare the data 
-# for model and get some results (plots, tests, predictions etc) from trained model
-# for state you can use the unique(data_merged$State)
-# for family and link please chech the run ?glm
 
 # filter state and add covariates will be used
 
@@ -56,6 +38,71 @@ filter_add_daily <- function(state) {
   df$yesterday_daily <- liste
   return(df)
 }
+
+
+
+
+## We shouldn't consider basic glm or lm approach because first assumption of glm (y must distributed independently)
+## is not appropriate for our case. Hence we considere tscount (time series count), it is a package provides 
+## likelihood-based estimtion methods for analysis and modeling of count time series following generalized 
+## linear models. We considered poisson model since out target variable is discrete and [0,inf) advantages of 
+## glm-based models
+# (a) They can describe covariate effects and negative correlations in a straightforward way.
+# (b) There is a rich toolkit available for this class of models.
+
+
+# HERE TSCOUNT STARTS
+
+
+library(tscount)
+
+df <- filter_add_daily("Maharashtra")
+df <- df %>% select(Confirmed,daily,yesterday_confirmed,num_day, ,daily,yesterday_daily,TotalSamples)
+
+?tsglm
+
+target_cumul <- df$Confirmed
+target_daily <- df$daily
+
+regressors_cumul <- cbind(Swabs=df$TotalSamples,daily = df$daily)
+regressors_dail <- cbind(Swabs =df$TotalSamples, Cum= df$Confirmed)
+
+model1 <- tsglm(target_cumul,model = list(past_obs=3, past_mean = 7), xreg = regressors_cumul, distr = "poisson",link="log")
+model2 <- tsglm(target_cumul,model = list(past_obs=3, past_mean = 7), xreg = regressors_cumul, distr = "nbinom",link="log")
+model3 <- tsglm(target_cumul,model = list(past_obs=1, past_mean = 14), xreg = regressors_cumul, distr = "nbinom",link="log")
+
+analyze_residuals <- function(model){
+  # good model should show random 0 concentrated, no systematic behaviour
+  plot(model$residual,main="Residual Plot")
+  cat("Mean of residuals", mean(model$residuals))
+  cat("\nVariance of residuals", var(model$residuals))
+  
+  # normal hist is desired
+  hist(model$residuals)
+  
+  # non systematic acf is desired
+  acf(model$residuals)
+}
+
+summary(model3)
+analyze_residuals(model3)
+
+par(mfrow=c(1,1))
+plot(df$Confirmed, main = "Target vs Fitted")
+lines(model3$fitted.values,col="red")
+
+par(mfrow=c(2,2))
+plot(model3)
+
+
+?tsglm
+
+
+
+
+
+
+
 
 
 # IGNORE THIS PART
@@ -109,13 +156,16 @@ model <- function(state, glm_model_family, link_func) {
   cat("predictions:",pred)
   cat("\nreal values",test$Confirmed)
   
+  plot(model$residual,main="Residuals")
+  acf(model$residual,main="Auto Correlation Function")
+  
   # just plotting test set and predictins together
   plot(test$Confirmed)
   lines(pred,col="red")
   
   # MSE and MAD check
-  mean((test$Confirmed - pred)^2/(nrow(test)))
-  mad((test$Confirmed - pred)/(nrow(test)))
+  cat(mean((test$Confirmed - pred)^2/(nrow(test))))
+  cat(mad((test$Confirmed - pred)/(nrow(test))))
   
   # here observation + predictions are created for plotting purpose otherwise I got error since
   # two dataframe don't have same length
@@ -130,46 +180,3 @@ model <- function(state, glm_model_family, link_func) {
 model("Maharashtra",gaussian,"identity")
 
 model("Jharkhand", gaussian, "identity")
-
-## We shouldn't consider basic glm or lm approach because first assumption of glm (y must distributed independently) is not
-## appropriate for our case. Hence we considere tscount (time series count), it is a package provides likelihood-based estimtion
-## methods for analysis and modeling of count time series following generalized linear models.
-## We considered poisson model since out target variable is discrete and [0,inf)
-## advantages of glm-based models
-# (a) They can describe covariate effects and negative correlations in a straightforward way.
-# (b) There is a rich toolkit available for this class of models.
-
-
-# HERE TSCOUNT STARTS
-
-## Tscount (Egidi's hint) for Cumulative
-library(tscount)
-
-df <- filter_add_daily("Maharashtra")
-df <- df %>% select(Confirmed,daily,yesterday_confirmed,num_day, ,daily,yesterday_daily,TotalSamples)
-
-target_cumul <- df$Confirmed
-target_daily <- df$daily
-
-regressors_cumul <- cbind(Swabs=df$TotalSamples,Daily=df$daily)
-regressors_dail <- cbind(Swabs =df$TotalSamples, Cum= df$Confirmed)
-
-model1 <- tsglm(target_cumul,model = list(past_obs=1, past_mean = 14), xreg = regressors_cumul, distr = "poisson",link="log")
-model2 <- tsglm(target_daily,model = list(past_obs=1, past_mean = 14), xreg = regressors_dail, distr = "nbinom",link="log")
-model3 <- tsglm(target_cumul,model = list(past_obs=1, past_mean = 7), xreg = regressors_cumul, distr = "nbinom",link="log")
-
-summary(model1)
-plot(model1$residuals)
-plot(df$Confirmed, main = "Target vs Fitted")
-lines(model1$fitted.values,col="red")
-
-par(mfrow=c(2,2))
-plot(model1)
-
-summary(model2)
-plot(model2$residuals)
-plot(df$daily)
-lines(model2$fitted.values,col="red")
-
-par(mfrow=c(2,2))
-plot(model2)
