@@ -9,18 +9,11 @@ data <- read.csv("data/ind_data_merged.csv")  # do not forget to change path
 data$Date <- ymd(data$Date)
 testing_details <- read.csv("data/testing_filtered_filled.csv")
 testing_details$Date <- ymd(testing_details$Date)
-str(data)
-str(testing_details)
+
 
 #merging testing details and covid_india by Date and State
 data_merged <- merge(data, testing_details,by = c("Date","State"))
 
-head(data_merged)
-
-colnames(data_merged)
-
-str(data_merged)
-unique(data_merged$State)
 
 # filter state and add covariates will be used
 
@@ -43,14 +36,13 @@ add_daily <- function(state) {
   return(df)
 }
 
-df <- add_daily("Maharashtra")
+df <- add_daily("Odisha")
   
 # possible covariates
 df <- df %>% select(daily,yesterday_daily,yesterday_confirmed,num_day, TotalSamples)
 
 # checking dist of covariates and target variables
 
-colnames(df)
 par(mfrow=c(3,2))
 histout=apply(df,2,hist)
 
@@ -71,7 +63,8 @@ test <- df[-seq(1:train_ind), ]
 # so according to this relations I think it is better to have num_day^2 and sqrt(yesterday_confirmed) but in model this 
 # ideas will be checked
 
-model0 <- glm(daily ~ yesterday_daily+TotalSamples+yesterday_confirmed+num_day,family = poisson(),train)
+model0 <- glm(daily ~ yesterday_daily+TotalSamples+yesterday_confirmed+num_day,
+              family = poisson(),train)
 
 analyze_model <- function(model){
   
@@ -101,13 +94,17 @@ analyze_model(model0)
 dispersiontest(model0,alternative = "greater")
 
 
-model1 <- glm(daily ~ yesterday_daily+TotalSamples+yesterday_confirmed+num_day,family = quasipoisson(),train)
+model1 <- glm(daily ~ yesterday_daily+TotalSamples+yesterday_confirmed+num_day,
+              family = quasipoisson(),
+              train)
 
 # here some of the coeff are not significant so previously mentioned transforms will be done and there are some problems 
 # with residuals again need to study theory
 analyze_model(model1)
 
-model2 <- glm(daily ~ yesterday_daily+TotalSamples+sqrt(yesterday_confirmed)+num_day^2,family = quasipoisson(),train)
+model2 <- glm(daily ~ yesterday_daily+TotalSamples+yesterday_confirmed+sqrt(yesterday_confirmed)+num_day+I(num_day^2),
+              family = quasipoisson(),
+              train)
 
 # for now all coeff seems significant maybe additional transformations can be done with reasoning, but still there are some 
 # problems in this model too, for now let's use this
@@ -149,7 +146,9 @@ plot(df$daily)
 lines(c(model2$fitted.values,pred),col="red")
 
 obs_pred <- append(model2$fitted.values,pred)
-ggplot(data=df,aes(x=num_day,y=daily)) + geom_line(col='blue') + geom_line(aes(y=obs_pred),col='red')
+ggplot(data=df,aes(x=num_day,y=daily)) +
+  geom_line(col='blue') +
+  geom_line(aes(y=obs_pred),col='red')
 
 mse_mad <- function(df,pred) {
   # MSE and MAD check
@@ -207,3 +206,21 @@ model0 <- glmer(daily ~ yesterday_daily+TotalSamples+yesterday_confirmed+num_day
 
 summary(model0)
 
+
+m1 <- glm(daily ~ num_day+yesterday_confirmed+yesterday_daily+TotalSamples,
+          family = quasipoisson(),
+          train)
+m2 <- glm(daily ~ num_day+yesterday_confirmed+TotalSamples,
+          family = quasipoisson(),
+          train)
+anova(m2, m1, test = "F")
+
+m1 <- glm(daily ~ num_day+yesterday_confirmed,
+          family = quasipoisson(),
+          train)
+anova(m1, m2, test = "F")
+
+m2 <- glm(daily ~ yesterday_confirmed,
+          family = quasipoisson(),
+          train)
+anova(m2, m1, test ="F")
