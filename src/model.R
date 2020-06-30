@@ -57,45 +57,43 @@ filter_add_daily <- function(state) {
 library(tscount)
 
 df <- filter_add_daily("Maharashtra")
-df <- df %>% select(Confirmed,daily,yesterday_confirmed,num_day, ,daily,yesterday_daily,TotalSamples)
-
-?tsglm
+df <- df %>% select(Confirmed,yesterday_confirmed,num_day,TotalSamples)
 
 target_cumul <- df$Confirmed
-target_daily <- df$daily
 
 regressors_cumul <- cbind(Swabs=df$TotalSamples,daily = df$daily)
-regressors_dail <- cbind(Swabs =df$TotalSamples, Cum= df$Confirmed)
 
-model1 <- tsglm(target_cumul,model = list(past_obs=3, past_mean = 7), xreg = regressors_cumul, distr = "poisson",link="log")
-model2 <- tsglm(target_cumul,model = list(past_obs=3, past_mean = 7), xreg = regressors_cumul, distr = "nbinom",link="log")
-model3 <- tsglm(target_cumul,model = list(past_obs=1, past_mean = 14), xreg = regressors_cumul, distr = "nbinom",link="log")
+model1 <- tsglm(target_cumul,model = list(past_obs=1, past_mean = 14), xreg = regressors_cumul, distr = "poisson",link="log")
+model2 <- tsglm(target_cumul,model = list(past_obs=1, past_mean = 7),init.method="firstobs",
+                ,xreg = regressors_cumul, distr = "poisson",link="log")
 
 analyze_residuals <- function(model){
   # good model should show random 0 concentrated, no systematic behaviour
-  plot(model$residual,main="Residual Plot")
+  plot(model$residual,main="Residual Plot",ask=FALSE)
   cat("Mean of residuals", mean(model$residuals))
   cat("\nVariance of residuals", var(model$residuals))
   
   # normal hist is desired
-  hist(model$residuals)
+  hist(model$residuals,ask=FALSE)
   
   # non systematic acf is desired
-  acf(model$residuals)
+  acf(model$residuals,ask=FALSE)
 }
 
-summary(model3)
-analyze_residuals(model3)
+options(scipen = 100)
+summary(model2)
+analyze_residuals(model2)
 
 par(mfrow=c(1,1))
 plot(df$Confirmed, main = "Target vs Fitted")
-lines(model3$fitted.values,col="red")
+lines(model2$fitted.values,col="red")
 
 par(mfrow=c(2,2))
-plot(model3)
+plot(model2,ask=FALSE)
 
 
 ?tsglm
+
 
 
 
