@@ -175,15 +175,35 @@ states <- c("Gujarat","Maharashtra","Madhya Pradesh",
             "Chhattisgarh","Jharkhand","Odisha",
             "West Bengal")
 
+#this part is for multilevel model data
+deneme <- data.frame(matrix(ncol = length(data_merged), nrow = 0))
+colnames(deneme) <- colnames(data_merged)
+
 for (i in states) {
-  print(i)
+  #print(i)
   df <- add_daily(i)
+  #print(df)
   png(paste("plots/daily_",i,".png",sep=''))
-  plot(df$num_day,df$daily)
+  plot(df$daily,type="l")
   dev.off()
+  deneme <- rbind(deneme,df)
 }
+
 
 # Try to try very same model for all states and check the results
 # study bit theory about lm and glm
 # maybe plot
 # presentation
+
+# Following the Egidi's suggestion multilevel model will be tried by following this link 
+# https://rpubs.com/rslbliss/r_mlm_ws#:~:text=To%20run%20a%20multilevel%20linear,we%20have%20used%20thus%20far.&text=Note%20that%20R%20uses%20restricted%20maximum%20likelihood%20to%20fit%20the%20model.
+# This part is missing
+
+library(lme4)
+
+?glmer
+
+model0 <- glmer(daily ~ yesterday_daily+TotalSamples+yesterday_confirmed+num_day + (1 | daily),family = poisson(),deneme)
+
+summary(model0)
+
