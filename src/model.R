@@ -2,8 +2,6 @@ library(tidyverse) # data manipulatinon
 library(lubridate) # for date formatting
 library(ggplot2) # for plotting
 
-# Preparing Data
-
 # read the data
 data <- read.csv("data/covid_19_india.csv")  # do not forget to change path
 # dmy and ymd is just for bringing date columns in to same format
@@ -33,12 +31,34 @@ str(data_merged)
 # data$Urban.population <- normalize(data$Urban.population)
 # data$num_lab <- normalize(data$num_lab)
 
-
-
 # It is the function that prepare the data 
 # for model and get some results (plots, tests, predictions etc) from trained model
 # for state you can use the unique(data_merged$State)
 # for family and link please chech the run ?glm
+
+# filter state and add covariates will be used
+
+filter_add_daily <- function(state) {
+  
+  df <- filter(data_merged,State == state)
+  
+  # Adding days and yesterday's confirmed case to dataframe
+  liste <- c(0)
+  liste <- c(liste,df$Confirmed[c(1:(length(df$Confirmed)-1))])
+  df$yesterday_confirmed <- liste
+  df$num_day <- seq(1:nrow(df))
+  df$daily <- df$Confirmed - df$yesterday_confirmed
+  # since our data is noisy, values smaller than 0 are set to 0.
+  df$daily[df$daily < 0] <- 0
+  # Adding yesterday's daily cases
+  liste <- c(0)
+  liste <- c(liste,df$daily[c(1:(length(df$daily)-1))])
+  df$yesterday_daily <- liste
+  return(df)
+}
+
+
+# IGNORE THIS PART
 
 model <- function(state, glm_model_family, link_func) {
   # filter the given state from general dataframe
@@ -110,3 +130,46 @@ model <- function(state, glm_model_family, link_func) {
 model("Maharashtra",gaussian,"identity")
 
 model("Jharkhand", gaussian, "identity")
+
+## We shouldn't consider basic glm or lm approach because first assumption of glm (y must distributed independently) is not
+## appropriate for our case. Hence we considere tscount (time series count), it is a package provides likelihood-based estimtion
+## methods for analysis and modeling of count time series following generalized linear models.
+## We considered poisson model since out target variable is discrete and [0,inf)
+## advantages of glm-based models
+# (a) They can describe covariate effects and negative correlations in a straightforward way.
+# (b) There is a rich toolkit available for this class of models.
+
+
+# HERE TSCOUNT STARTS
+
+## Tscount (Egidi's hint) for Cumulative
+library(tscount)
+
+df <- filter_add_daily("Maharashtra")
+df <- df %>% select(Confirmed,daily,yesterday_confirmed,num_day, ,daily,yesterday_daily,TotalSamples)
+
+target_cumul <- df$Confirmed
+target_daily <- df$daily
+
+regressors_cumul <- cbind(Swabs=df$TotalSamples,Daily=df$daily)
+regressors_dail <- cbind(Swabs =df$TotalSamples, Cum= df$Confirmed)
+
+model1 <- tsglm(target_cumul,model = list(past_obs=1, past_mean = 14), xreg = regressors_cumul, distr = "poisson",link="log")
+model2 <- tsglm(target_daily,model = list(past_obs=1, past_mean = 14), xreg = regressors_dail, distr = "nbinom",link="log")
+model3 <- tsglm(target_cumul,model = list(past_obs=1, past_mean = 7), xreg = regressors_cumul, distr = "nbinom",link="log")
+
+summary(model1)
+plot(model1$residuals)
+plot(df$Confirmed, main = "Target vs Fitted")
+lines(model1$fitted.values,col="red")
+
+par(mfrow=c(2,2))
+plot(model1)
+
+summary(model2)
+plot(model2$residuals)
+plot(df$daily)
+lines(model2$fitted.values,col="red")
+
+par(mfrow=c(2,2))
+plot(model2)
