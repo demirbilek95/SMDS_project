@@ -2,8 +2,6 @@ library(tidyverse) # data manipulatinon
 library(lubridate) # for date formatting
 library(ggplot2) # for plotting
 
-# Preparing Data
-
 # read the data
 data <- read.csv("data/covid_19_india.csv")  # do not forget to change path
 # dmy and ymd is just for bringing date columns in to same format
@@ -17,28 +15,95 @@ str(testing_details)
 data_merged <- merge(data, testing_details,by = c("Date","State"))
 
 head(data)
-
 colnames(data_merged)
-
 str(data_merged)
 
-# This part can be useful later to bring covariates to same scale
-# normalize <- function(x) {
-#   return ((x - min(x)) / (max(x) - min(x)))
-# }
-# 
-# data$Population <- normalize(data$Population)
-# data$Rural.population <- normalize(data$Rural.population)
-# data$TotalPublicHealthFacilities_HMIS <- normalize(data$TotalPublicHealthFacilities_HMIS)
-# data$Urban.population <- normalize(data$Urban.population)
-# data$num_lab <- normalize(data$num_lab)
+# filter state and add covariates will be used
+
+filter_add_daily <- function(state) {
+  
+  df <- filter(data_merged,State == state)
+  
+  # Adding days and yesterday's confirmed case to dataframe
+  liste <- c(0)
+  liste <- c(liste,df$Confirmed[c(1:(length(df$Confirmed)-1))])
+  df$yesterday_confirmed <- liste
+  df$num_day <- seq(1:nrow(df))
+  df$daily <- df$Confirmed - df$yesterday_confirmed
+  # since our data is noisy, values smaller than 0 are set to 0.
+  df$daily[df$daily < 0] <- 0
+  # Adding yesterday's daily cases
+  liste <- c(0)
+  liste <- c(liste,df$daily[c(1:(length(df$daily)-1))])
+  df$yesterday_daily <- liste
+  return(df)
+}
 
 
 
-# It is the function that prepare the data 
-# for model and get some results (plots, tests, predictions etc) from trained model
-# for state you can use the unique(data_merged$State)
-# for family and link please chech the run ?glm
+
+## We shouldn't consider basic glm or lm approach because first assumption of glm (y must distributed independently)
+## is not appropriate for our case. Hence we considere tscount (time series count), it is a package provides 
+## likelihood-based estimtion methods for analysis and modeling of count time series following generalized 
+## linear models. We considered poisson model since out target variable is discrete and [0,inf) advantages of 
+## glm-based models
+# (a) They can describe covariate effects and negative correlations in a straightforward way.
+# (b) There is a rich toolkit available for this class of models.
+
+
+# HERE TSCOUNT STARTS
+
+
+library(tscount)
+
+df <- filter_add_daily("Maharashtra")
+df <- df %>% select(Confirmed,yesterday_confirmed,num_day,TotalSamples)
+
+target_cumul <- df$Confirmed
+
+regressors_cumul <- cbind(Swabs=df$TotalSamples,daily = df$daily)
+
+model1 <- tsglm(target_cumul,model = list(past_obs=1, past_mean = 14), xreg = regressors_cumul, distr = "poisson",link="log")
+model2 <- tsglm(target_cumul,model = list(past_obs=1, past_mean = 7),init.method="firstobs",
+                ,xreg = regressors_cumul, distr = "poisson",link="log")
+
+analyze_residuals <- function(model){
+  # good model should show random 0 concentrated, no systematic behaviour
+  plot(model$residual,main="Residual Plot",ask=FALSE)
+  cat("Mean of residuals", mean(model$residuals))
+  cat("\nVariance of residuals", var(model$residuals))
+  
+  # normal hist is desired
+  hist(model$residuals,ask=FALSE)
+  
+  # non systematic acf is desired
+  acf(model$residuals,ask=FALSE)
+}
+
+options(scipen = 100)
+summary(model2)
+analyze_residuals(model2)
+
+par(mfrow=c(1,1))
+plot(df$Confirmed, main = "Target vs Fitted")
+lines(model2$fitted.values,col="red")
+
+par(mfrow=c(2,2))
+plot(model2,ask=FALSE)
+
+
+?tsglm
+
+
+
+
+
+
+
+
+
+
+# IGNORE THIS PART
 
 model <- function(state, glm_model_family, link_func) {
   # filter the given state from general dataframe
@@ -89,13 +154,16 @@ model <- function(state, glm_model_family, link_func) {
   cat("predictions:",pred)
   cat("\nreal values",test$Confirmed)
   
+  plot(model$residual,main="Residuals")
+  acf(model$residual,main="Auto Correlation Function")
+  
   # just plotting test set and predictins together
   plot(test$Confirmed)
   lines(pred,col="red")
   
   # MSE and MAD check
-  mean((test$Confirmed - pred)^2/(nrow(test)))
-  mad((test$Confirmed - pred)/(nrow(test)))
+  cat(mean((test$Confirmed - pred)^2/(nrow(test))))
+  cat(mad((test$Confirmed - pred)/(nrow(test))))
   
   # here observation + predictions are created for plotting purpose otherwise I got error since
   # two dataframe don't have same length
