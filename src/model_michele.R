@@ -150,12 +150,14 @@ for(s in levels(complete$State)){
 multiplot(plotlist=c(resplots2[1:3],resplots[4:6],resplots2[7]), cols=3)
 multiplot(plotlist=c(predplots2[1:3],predplots[4:6],predplots2[7]), cols=3)
 
+# print deviances
 devs=c()
 for(s in names(summaries)){
   print(s)
   print(c(summaries[[s]]$deviance,summaries2[[s]]$deviance ))
 }
 
+#print pvals
 pvals=c()
 for(s in names(summaries)){
   print(s)
@@ -163,12 +165,30 @@ for(s in names(summaries)){
 }
 names(summaries)
 
-
-
-summaries[[1]]
-summaries2[[1]]
-
+#print anovas
 for(s in names(summaries)){
   print(s)
   print(anova(modls[[s]],modls2[[s]],test = "F"))
 }
+
+#cumulative predictions plot
+predconfplots = list()
+for(s in levels(complete$State)){
+  comp2 <- complete %>% filter(State == s) %>% mutate(Day = as.numeric(Date- min(Date)))
+  
+  predconfplots[[s]] <- 
+    comp2 %>%
+    cbind(predConfirmed1 = cumsum(predict(modls[[s]],
+                                         newdata=comp2,
+                                         type = "response"  ) ),
+          predConfirmed2 = cumsum(predict(modls2[[s]],
+                                          newdata=comp2,
+                                          type = "response"  ) )) %>% 
+    ggplot()+
+    geom_line(aes(Date,predConfirmed1),color="blue",size=1)+
+    geom_line(aes(Date,predConfirmed2),color="red")+
+      geom_point(aes(Date,Confirmed),shape=20)+
+    labs(title=s)
+  
+}
+multiplot(plotlist=predconfplots, cols=3)
