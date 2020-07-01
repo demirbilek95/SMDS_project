@@ -157,6 +157,20 @@ census %>% select(State, Rural.population, Urban.population, Density) %>%
         legend.text = element_text(size=10),
         legend.position = c(.01,.75)) +
   labs(x="",y="Population", fill="Type", alpha = expression(paste("Density (",pop/m^2,")")))
+
+census %>% select(State, Rural.population, Urban.population, Population, Density) %>%
+  gather("Stat", "Val",-State, -Density,-Population) %>% 
+  ggplot()+
+  geom_bar(aes(State,Val, fill=Stat, alpha = Density), stat="identity",color="black") +
+  scale_fill_hue( labels=c("Rural","Urban"))+
+  scale_alpha(guide="none")+
+  geom_text(aes(State, Population, label=paste(Density,"~pop/m^2"), group=State), parse=TRUE, size=2.5,vjust=-.25)+
+  theme(axis.text.x = element_text(angle=45, hjust = 1),
+        legend.key.size = unit(.5,"cm"),
+        legend.title = element_text(size=10),
+        legend.text = element_text(size=10),
+        legend.position = c(.1,.80)) +
+  labs(x="",y="Population", fill="Type")
 ggsave("plots/pop+density_hist.png", width = 150, height=120,units="mm" )
 
 census %>% ggplot(aes(State,Density)) +

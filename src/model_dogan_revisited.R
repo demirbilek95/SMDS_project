@@ -34,6 +34,7 @@ data_merged <- full_join(covid19,testing, by= c("State", "Date")) %>%
 
 # HERE TSCOUNT STARTS
 
+#function that extracts scores
 summary.scores <- function(model){
   sumry = summary(model)
   return(c( LogLkh=as.numeric(sumry$logLik),
@@ -44,39 +45,58 @@ summary.scores <- function(model){
             VarRes = var(model$residuals)))
 }
 
+#train models, gather scores for each state
 scores = c()
 models = list()
-
 for(s in levels(data_merged$State)){
   
-  #filter data
+  #filter data, remove last week
   df <- data_merged %>% filter(State==s)
+  df <- df[1:(nrow(df)-7),]
   
   #create models
   model1 <- tsglm(df$Confirmed,
                   model = list(past_obs=1, past_mean = 14),
                   xreg = (df %>% select(TotalSamples,dConf) ),
                   init.method="firstobs",
-                  distr = "poisson",link="log")
+                  distr = "nbinom",link="log")
   
   model2 <- tsglm(df$Confirmed,
+                  model = list(past_obs=1, past_mean = 14),
+                  xreg = (df %>% select(TotalSamples,dConf) ),
+                  init.method="firstobs",
+                  distr = "poisson",link="log")
+  
+  model3 <- tsglm(df$Confirmed,
+                  model = list(past_obs=1, past_mean = 14),
+                  init.method="firstobs",
+                  xreg = (df %>% select(TotalSamples) ),
+                  distr = "nbinom",link="log")
+  
+  model4 <- tsglm(df$Confirmed,
                   model = list(past_obs=1, past_mean = 7),
                   init.method="firstobs",
-                  xreg = (df %>% select(TotalSamples,dConf) ),
+                  xreg = (df %>% select(TotalSamples) ),
                   distr = "poisson",link="log")
   
   #store models
   this.models=list(model1,
-                   model2)
+                   model2,
+                   model3,
+                   model4)
   
   models[[s]] = this.models
   
   #store scores
   score = c()
   score = rbind(summary.scores(model1),
-                summary.scores(model2))
+                summary.scores(model2),
+                summary.scores(model3),
+                summary.scores(model4))
   rownames(score)<-c(paste0(s,".model1"),
-                     paste0(s,".model2"))
+                     paste0(s,".model2"),
+                     paste0(s,".model3"),
+                     paste0(s,".model4"))
   
   scores = rbind(scores,score)
 }
@@ -84,6 +104,65 @@ for(s in levels(data_merged$State)){
 #see scores
 scores
 
+#chose best models according to scores
+#Model 2 appears to be the best in terms of scores for all states!
+
+#TODO:get residuals/predictions plot 
+
+preds = data.frame()
+for (s in levels(data_merged$State)){
+  df<-(data_merged %>% filter(State==s) %>% select(Date,Confirmed,TotalSamples,dConf))
+  
+  a = data.frame(State = s,
+                 Date = df$Date[1:(nrow(df)-7)],
+                 Confirmed = df$Confirmed[1:(nrow(df)-7)],
+                 Training = "Training",
+                 Predictions = models[[s]][[2]]$fitted.values,
+                 Upper=NA,Lower=NA)
+  
+  this.pred.obj =  predict(models[[s]][[2]],
+                           n.ahead=7,
+                           newxreg=(df %>% select(TotalSamples,dConf))[(nrow(df)-6):nrow(df),])
+  
+  b = data.frame(State = s,
+                 Date = df$Date[(nrow(df)-6):nrow(df)],
+                 Confirmed = df$Confirmed[(nrow(df)-6):nrow(df)],
+                 Training = "Test",
+                 Predictions = this.pred.obj$pred,
+                 Upper=this.pred.obj$interval[,2],
+                 Lower=this.pred.obj$interval[,1])
+  
+  preds = preds %>% rbind(a) %>% rbind(b)
+}
+
+#predictions
+preds %>% ggplot()+
+  geom_point(aes(Date,Confirmed,color=Training))+
+  geom_line(aes(Date,Predictions,color="Fitted"), size=1)+
+  geom_ribbon(aes(Date,ymin=Lower,ymax=Upper),color="#3366ff",fill="green",alpha=.5) +
+  scale_color_manual(values=c("#ff0000","#000000"))+
+  labs(x="",y="Confirmed + Fit")+
+  scale_color_manual(name="",values=c("Fitted"="#3366ff","Training"="black","Test"="red"))+
+  theme(legend.position = "bottom")+
+  facet_wrap(vars(State),scales="free_y")
+ggsave("plots/Confirmed_pred_facets.png", width = 150, height=120,units="mm" )
+
+#std residuals
+preds %>% group_by(State) %>% mutate(StdRes = (Confirmed-Predictions)/sd(Confirmed-Predictions)) %>% 
+  ggplot()+
+  geom_hline(yintercept = 0, linetype="dashed",color="grey")+
+  geom_point(aes(Predictions,StdRes,color=Training))+
+  labs(x="",y="Standardized Residuals")+
+  scale_color_manual(name="",values=c("Training"="black","Test"="red"))+
+  theme(legend.position = "bottom")+
+  facet_wrap(vars(State),scales="free_y")
+ggsave("plots/Confirmed_stdres_facets.png", width = 150, height=120,units="mm" )
+
+#TODO: diagnostic plots
+
+summary(model1)
+
+summary(models[[s]][[1]])
 
 options(scipen = 100)
 summary(model2)

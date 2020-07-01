@@ -1,5 +1,6 @@
 library(dplyr)
 library(ggplot2)
+library(tidyverse)
 
 covid19 <- read.csv("data/covid_19_india_filtered.csv") %>% mutate(Date=as.Date(Date))
 testing <- read.csv("data/testing_filtered_filled.csv") %>% mutate(Date=as.Date(Date))
@@ -12,6 +13,7 @@ complete <- full_join(covid19,testing, by= c("State", "Date")) %>%
   arrange(State, Date) %>% 
   group_by(State) %>%
   transmute(Date= as.Date(Date),
+            Day= as.numeric(Date-min(Date)),
             Confirmed, dConf = Confirmed - lag(Confirmed, default=0),
             Deaths, Cured, Population, Density,
             
@@ -192,3 +194,149 @@ for(s in levels(complete$State)){
   
 }
 multiplot(plotlist=predconfplots, cols=3)
+
+
+#FINAL MODELS
+preds = data.frame()
+modls = list()
+{
+s = levels(complete$State)[1]
+modl <- glm(dConf ~ Day + lag(Confirmed, default=0) + lag(TotalSamples,default=0),
+            data=(complete %>% filter(State == s) %>% filter(row_number()<n()-6)),
+            family = quasipoisson)
+preds = rbind(preds,
+              data.frame(State=s,
+                         DailyPred =predict(modl,
+                                            newdata=(complete %>% filter(State == s)),
+                                            type = "response")) %>%
+                mutate(CumPred = cumsum(DailyPred),
+                       Day = (row_number()-1),
+                       Train = ifelse(row_number()<(n()-6),"Training","Test" )))
+modls[[s]] = modl
+
+s = levels(complete$State)[2]
+modl <- glm(dConf ~ Day + I(Day^2) + lag(Confirmed, default=0) + lag(TotalSamples,default=0),
+            data=(complete %>% filter(State == s) %>% filter(row_number()<n()-6)),
+            family = quasipoisson)
+preds = rbind(preds,
+              data.frame(State=s,
+                         DailyPred =predict(modl,
+                                            newdata=(complete %>% filter(State == s)),
+                                            type = "response")) %>%
+                mutate(CumPred = cumsum(DailyPred),
+                       Day = (row_number()-1),
+                       Train = ifelse(row_number()<(n()-6),"Training","Test" )))
+modls[[s]] = modl
+
+s = levels(complete$State)[3]
+modl <- glm(dConf ~ -1+ Day + I(Day^2) + lag(Confirmed, default=0) + lag(TotalSamples,default=0),
+            data=(complete %>% filter(State == s) %>% filter(row_number()<n()-6)),
+            family = quasipoisson)
+preds = rbind(preds,
+              data.frame(State=s,
+                         DailyPred =predict(modl,
+                                            newdata=(complete %>% filter(State == s)),
+                                            type = "response")) %>%
+                mutate(CumPred = cumsum(DailyPred),
+                       Day = (row_number()-1),
+                       Train = ifelse(row_number()<(n()-6),"Training","Test" )))
+modls[[s]] = modl
+
+for(s in levels(complete$State)[4:5]){
+  modl <- glm(dConf ~  Day  + lag(Confirmed, default=0),
+              data=(complete %>% filter(State == s) %>% filter(row_number()<n()-6)),
+              family = quasipoisson)
+  preds = rbind(preds,
+                data.frame(State=s,
+                           DailyPred =predict(modl,
+                                              newdata=(complete %>% filter(State == s)),
+                                              type = "response")) %>%
+                  mutate(CumPred = cumsum(DailyPred),
+                         Day = (row_number()-1),
+                         Train = ifelse(row_number()<(n()-6),"Training","Test" )))
+  modls[[s]] = modl
+}
+
+s = levels(complete$State)[6]
+modl <- glm(dConf ~ -1+ I(Day^2) + lag(Confirmed, default=0),
+            data=(complete %>% filter(State == s) %>% filter(row_number()<n()-6)),
+            family = quasipoisson)
+preds = rbind(preds,
+              data.frame(State=s,
+                         DailyPred =predict(modl,
+                                            newdata=(complete %>% filter(State == s)),
+                                            type = "response")) %>%
+                mutate(CumPred = cumsum(DailyPred),
+                       Day = (row_number()-1),
+                       Train = ifelse(row_number()<(n()-6),"Training","Test" )))
+modls[[s]] = modl
+
+s = levels(complete$State)[7]
+modl <- glm(dConf ~ Day + I(Day^2) + lag(TotalSamples,default=0),
+            data=(complete %>% filter(State == s) %>% filter(row_number()<n()-6)),
+            family = quasipoisson)
+preds = rbind(preds,
+              data.frame(State=s,
+                         DailyPred =predict(modl,
+                                            newdata=(complete %>% filter(State == s)),
+                                            type = "response")) %>%
+                mutate(CumPred = cumsum(DailyPred),
+                       Day = (row_number()-1),
+                       Train = ifelse(row_number()<(n()-6),"Training","Test" )))
+modls[[s]] = modl
+}
+
+#check right models
+for(s in names(modls)){
+  print(s)
+  print(modls[[s]]$call)
+  
+}
+
+final = full_join(complete,preds, by= c("State", "Day"))
+
+#preds
+final %>% ggplot()+
+  geom_point(aes(Date,dConf,color=Train))+
+  geom_line(aes(Date,DailyPred,color="Fitted"), size=1)+
+  #geom_ribbon(aes(Date,ymin=Lower,ymax=Upper),color="#3366ff",fill="green",alpha=.5) +
+  scale_color_manual(values=c("#ff0000","#000000"))+
+  labs(x="",y="Daily Confirmed + Fit")+
+  scale_color_manual(name="",values=c("Fitted"="#3366ff","Training"="black","Test"="red"))+
+  theme(legend.position = "bottom")+
+  facet_wrap(vars(State),scales="free_y")
+ggsave("plots/Daily_pred_facets.png", width = 150, height=120,units="mm" )
+
+#stdres
+final %>% group_by(State) %>% mutate(StdRes = (dConf-DailyPred)/sd(dConf-DailyPred)) %>% 
+  ggplot()+
+  geom_hline(yintercept = 0, linetype="dashed",color="grey")+
+  geom_point(aes(DailyPred,StdRes,color=Train))+
+  labs(x="",y="Standardized Residuals")+
+  scale_color_manual(name="",values=c("Training"="black","Test"="red"))+
+  theme(legend.position = "bottom")+
+  facet_wrap(vars(State),scales="free_x")
+ggsave("plots/Daily_stdres_facets.png", width = 150, height=120,units="mm" )
+
+#confirmed preds
+final %>% ggplot()+
+  geom_point(aes(Date,Confirmed,color=Train))+
+  geom_line(aes(Date,CumPred,color="Fitted"), size=1)+
+  #geom_ribbon(aes(Date,ymin=Lower,ymax=Upper),color="#3366ff",fill="green",alpha=.5) +
+  scale_color_manual(values=c("#ff0000","#000000"))+
+  labs(x="",y="Daily Confirmed + Fit")+
+  scale_color_manual(name="",values=c("Fitted"="#3366ff","Training"="black","Test"="red"))+
+  theme(legend.position = "bottom")+
+  facet_wrap(vars(State),scales="free_y")
+ggsave("plots/Confirmed_predDaily_facets.png", width = 150, height=120,units="mm" )
+
+#stdres
+final %>% group_by(State) %>% mutate(StdRes = (Confirmed-CumPred)/sd(Confirmed-CumPred)) %>% 
+  ggplot()+
+  geom_hline(yintercept = 0, linetype="dashed",color="grey")+
+  geom_point(aes(DailyPred,StdRes,color=Train))+
+  labs(x="",y="Standardized Residuals")+
+  scale_color_manual(name="",values=c("Training"="black","Test"="red"))+
+  theme(legend.position = "bottom")+
+  facet_wrap(vars(State),scales="free_x")
+ggsave("plots/Cumulative_Daily_stdres_facets.png", width = 150, height=120,units="mm" )
