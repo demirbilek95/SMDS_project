@@ -201,7 +201,7 @@ preds = data.frame()
 modls = list()
 {
 s = levels(complete$State)[1]
-modl <- glm(dConf ~ Day + lag(Confirmed, default=0) + lag(TotalSamples,default=0),
+modl <- glm(dConf ~ -1 + lag(Confirmed, default=0) + lag(TotalSamples,default=0),
             data=(complete %>% filter(State == s) %>% filter(row_number()<n()-6)),
             family = quasipoisson)
 preds = rbind(preds,
@@ -272,7 +272,7 @@ preds = rbind(preds,
 modls[[s]] = modl
 
 s = levels(complete$State)[7]
-modl <- glm(dConf ~ Day + I(Day^2) + lag(TotalSamples,default=0),
+modl <- glm(dConf ~ -1+ Day + I(Day^2) + lag(TotalSamples,default=0),
             data=(complete %>% filter(State == s) %>% filter(row_number()<n()-6)),
             family = quasipoisson)
 preds = rbind(preds,
@@ -287,11 +287,29 @@ modls[[s]] = modl
 }
 
 #check right models
+parameters = data.frame()
 for(s in names(modls)){
   print(s)
-  print(modls[[s]]$call)
-  
+  #print(modls[[s]]$call)
+  #print(summary(modls[[s]]))
+  parameters = rbind(parameters,
+                     cbind(
+                     cbind(data.frame(summary(modls[[s]])$coefficients),
+                           Covariate = row.names(summary(modls[[s]])$coefficients)),
+                     confint(modls[[s]]))
+                     %>%  mutate(State=s))
 }
+
+
+
+colnames(parameters) <- c("Estimate","StdErr","tvalue","pvalue","Covariate","low","high","State")
+parameters %>% mutate(Covariate = factor(Covariate, labels= c("Y.Conf","Y.TotSamp","b_0","Day","Day^2"))) %>% 
+  filter(Covariate %in%  c("Day","Day^2")) %>% 
+  ggplot()+
+  geom_point(aes(Covariate, Estimate))+
+  geom_errorbar(aes(Covariate, ymax=high, ymin=low))+
+  facet_wrap(vars(State),scales="free_x")
+ggsave("plots/Daily_params_days.png", width = 150, height=120,units="mm" )
 
 final = full_join(complete,preds, by= c("State", "Day"))
 
@@ -339,4 +357,4 @@ final %>% group_by(State) %>% mutate(StdRes = (Confirmed-CumPred)/sd(Confirmed-C
   scale_color_manual(name="",values=c("Training"="black","Test"="red"))+
   theme(legend.position = "bottom")+
   facet_wrap(vars(State),scales="free_x")
-ggsave("plots/Cumulative_Daily_stdres_facets.png", width = 150, height=120,units="mm" )
+ggsave("plots/Confirmed_Daily_stdres_facets.png", width = 150, height=120,units="mm" )

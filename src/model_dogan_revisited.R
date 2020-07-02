@@ -16,7 +16,9 @@ data_merged <- full_join(covid19,testing, by= c("State", "Date")) %>%
   group_by(State) %>%
   transmute(Date,
             Confirmed, dConf = Confirmed - lag(Confirmed, default=0),
+            lag_dConf = lag(dConf,default=0),
             Deaths, Cured,
+            lag_Deaths= lag(Deaths,default=0),lag_Cured = lag(Cured,default=0),
             
             TotalSamples = nadefault(TotalSamples,nadefault(lag(TotalSamples),0)),
             dSamp = TotalSamples - lag(TotalSamples, default = 0),
@@ -38,8 +40,10 @@ data_merged <- full_join(covid19,testing, by= c("State", "Date")) %>%
 summary.scores <- function(model){
   sumry = summary(model)
   return(c( LogLkh=as.numeric(sumry$logLik),
-            AIC= sumry$AIC,
+            LogScore = as.numeric(scoring(model)[1]),
+            SqrRes = as.numeric(scoring(model)[7]),
             BIC= sumry$BIC,
+            AIC= sumry$AIC,
             QIC= sumry$QIC,
             MeanRes = mean(model$residuals),
             VarRes = var(model$residuals)))
@@ -57,24 +61,24 @@ for(s in levels(data_merged$State)){
   #create models
   model1 <- tsglm(df$Confirmed,
                   model = list(past_obs=1, past_mean = 14),
-                  xreg = (df %>% select(TotalSamples,dConf) ),
+                  xreg = (df %>% select(TotalSamples,lag_dConf,lag_Cured,lag_Deaths) ),
                   init.method="firstobs",
-                  distr = "nbinom",link="log")
+                  distr = "poisson",link="log")
   
   model2 <- tsglm(df$Confirmed,
                   model = list(past_obs=1, past_mean = 14),
-                  xreg = (df %>% select(TotalSamples,dConf) ),
+                  xreg = (df %>% select(TotalSamples,lag_dConf,lag_Cured) ),
                   init.method="firstobs",
                   distr = "poisson",link="log")
   
   model3 <- tsglm(df$Confirmed,
                   model = list(past_obs=1, past_mean = 14),
                   init.method="firstobs",
-                  xreg = (df %>% select(TotalSamples) ),
-                  distr = "nbinom",link="log")
+                  xreg = (df %>% select(TotalSamples,lag_dConf) ),
+                  distr = "poisson",link="log")
   
   model4 <- tsglm(df$Confirmed,
-                  model = list(past_obs=1, past_mean = 7),
+                  model = list(past_obs=1, past_mean = 14),
                   init.method="firstobs",
                   xreg = (df %>% select(TotalSamples) ),
                   distr = "poisson",link="log")
@@ -107,23 +111,49 @@ scores
 #chose best models according to scores
 #Model 2 appears to be the best in terms of scores for all states!
 
-#TODO:get residuals/predictions plot 
-
+#get residuals/predictions plot 
 preds = data.frame()
+#for (mod_no in 1:4){
 for (s in levels(data_merged$State)){
-  df<-(data_merged %>% filter(State==s) %>% select(Date,Confirmed,TotalSamples,dConf))
+  df<-(data_merged %>% filter(State==s) %>% select(Date,Confirmed,TotalSamples,lag_dConf,lag_Cured,lag_Deaths))
   
   a = data.frame(State = s,
                  Date = df$Date[1:(nrow(df)-7)],
                  Confirmed = df$Confirmed[1:(nrow(df)-7)],
                  Training = "Training",
-                 Predictions = models[[s]][[2]]$fitted.values,
                  Upper=NA,Lower=NA)
   
-  this.pred.obj =  predict(models[[s]][[2]],
-                           n.ahead=7,
-                           newxreg=(df %>% select(TotalSamples,dConf))[(nrow(df)-6):nrow(df),])
   
+  #only those mods
+  if(s == levels(data_merged$State)[7]){
+    mod_no=1
+  }else if(s == levels(data_merged$State)[3]){
+    mod_no=2
+  }else if(s %in% levels(data_merged$State)[c(2,4,6)]){
+    mod_no=3
+  } else {
+    mod_no=4
+  }
+  
+  if(mod_no==1){
+    this.pred.obj =  predict(models[[s]][[mod_no]],
+                             n.ahead=7,
+                             newxreg=(df %>% select(TotalSamples,lag_dConf,lag_Cured, lag_Deaths))[(nrow(df)-6):nrow(df),])
+  }else if(mod_no==2){
+    this.pred.obj =  predict(models[[s]][[mod_no]],
+                             n.ahead=7,
+                             newxreg=(df %>% select(TotalSamples,lag_dConf,lag_Cured))[(nrow(df)-6):nrow(df),])
+  }else if(mod_no==3){
+    this.pred.obj =  predict(models[[s]][[mod_no]],
+                             n.ahead=7,
+                             newxreg=(df %>% select(TotalSamples,lag_dConf))[(nrow(df)-6):nrow(df),])
+  } else {
+    this.pred.obj =  predict(models[[s]][[mod_no]],
+                             n.ahead=7,
+                             newxreg=(df %>% select(TotalSamples))[(nrow(df)-6):nrow(df),])
+  }
+ 
+  a = a %>% mutate(Predictions = models[[s]][[mod_no]]$fitted.values)
   b = data.frame(State = s,
                  Date = df$Date[(nrow(df)-6):nrow(df)],
                  Confirmed = df$Confirmed[(nrow(df)-6):nrow(df)],
@@ -132,11 +162,17 @@ for (s in levels(data_merged$State)){
                  Upper=this.pred.obj$interval[,2],
                  Lower=this.pred.obj$interval[,1])
   
-  preds = preds %>% rbind(a) %>% rbind(b)
+  preds = preds %>% rbind(a %>% rbind(b) %>% mutate(Model = mod_no))
 }
+#}
+
+msq = preds %>% group_by(State, Model) %>% summarize(SqErr = mean((Confirmed-Predictions)^2))
+
+
 
 #predictions
-preds %>% ggplot()+
+preds %>%
+  ggplot()+
   geom_point(aes(Date,Confirmed,color=Training))+
   geom_line(aes(Date,Predictions,color="Fitted"), size=1)+
   geom_ribbon(aes(Date,ymin=Lower,ymax=Upper),color="#3366ff",fill="green",alpha=.5) +
@@ -151,12 +187,25 @@ ggsave("plots/Confirmed_pred_facets.png", width = 150, height=120,units="mm" )
 preds %>% group_by(State) %>% mutate(StdRes = (Confirmed-Predictions)/sd(Confirmed-Predictions)) %>% 
   ggplot()+
   geom_hline(yintercept = 0, linetype="dashed",color="grey")+
-  geom_point(aes(Predictions,StdRes,color=Training))+
+  geom_point(aes(D,StdRes,color=Training))+
   labs(x="",y="Standardized Residuals")+
   scale_color_manual(name="",values=c("Training"="black","Test"="red"))+
   theme(legend.position = "bottom")+
-  facet_wrap(vars(State),scales="free_y")
+  facet_wrap(vars(State),scales="free_x")
 ggsave("plots/Confirmed_stdres_facets.png", width = 150, height=120,units="mm" )
+
+#std residuals
+preds %>% group_by(State) %>% mutate(StdRes = (Confirmed-Predictions)/sd(Confirmed-Predictions)) %>% 
+  ggplot()+
+  geom_hline(yintercept = 0, linetype="dashed",color="grey")+
+  geom_point(aes(Date,StdRes,color=Training))+
+  labs(x="",y="Standardized Residuals")+
+  scale_color_manual(name="",values=c("Training"="black","Test"="red"))+
+  theme(legend.position = "bottom")+
+  facet_wrap(vars(State),scales="free_x")
+ggsave("plots/Confirmed_timeres_facets.png", width = 150, height=120,units="mm" )
+
+acf(preds %>% filter(State==1))
 
 #TODO: diagnostic plots
 
